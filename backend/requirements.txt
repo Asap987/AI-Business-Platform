@@ -1,0 +1,6 @@
+pydantic>=2.7
+pydantic-settings>=2.3
+
+# Test tooling
+pytest>=8
+pytest-asyncio>=0.23
