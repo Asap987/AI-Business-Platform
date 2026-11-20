@@ -1,6 +1,6 @@
 # Frontend API contract
 
-The frontend (`frontend/`) was built before the backend implemented anything, so it targets the contract below. **None of these endpoints exist yet.** Until they do, the app shows honest "not available" states instead of data. All routes sit under `NEXT_PUBLIC_API_BASE_URL` + `NEXT_PUBLIC_API_PREFIX` (default `http://localhost:8000/api/v1`). Every integration point is isolated in `src/lib/auth.ts` and `src/features/dashboard/api.ts`, so changing a route or shape touches one file.
+The frontend (`frontend/`) was built before the backend implemented anything, so it targets the contract below. **Status (2026-11-20):** the endpoints below are implemented in `backend/app/api/v1/` and tested (SQLite and PostgreSQL 16, plus a browser run of the real frontend against the real API). Notes on what is real and what is not are in "Implementation status" at the end. All routes sit under `NEXT_PUBLIC_API_BASE_URL` + `NEXT_PUBLIC_API_PREFIX` (default `http://localhost:8000/api/v1`). Every integration point is isolated in `src/lib/auth.ts` and `src/features/dashboard/api.ts`, so changing a route or shape touches one file.
 
 ## Conventions the frontend relies on
 
@@ -45,3 +45,16 @@ The registration form has **no phone field**: `schema.sql` has no phone column o
 ## Security notes for the backend implementer
 
 Enforce authorization and tenant isolation on every endpoint. The frontend route guard is a usability feature only. Hash passwords with argon2 or bcrypt. Rate-limit login, register and forgot-password. Set CORS to the exact frontend origin with credentials. Use CSRF protection for cookie-authenticated state-changing requests (e.g. a double-submit token or a custom header check), since the session is a cookie.
+
+## Implementation status (2026-11-20)
+
+Implemented and tested: `/auth/login|register|logout|me|forgot-password`, `/dashboard/kpis|case-overview|department-activity`, `/conversations`, `/agents`, `/notifications/summary`, `/health`.
+
+- **Sessions** are server-side rows (`auth_sessions`, migration 0002). The cookie holds a random token; only its SHA-256 is stored. Logout deletes the row, so a copied cookie stops working. Default lifetime 7 days (`SESSION_TTL_HOURS`), no sliding renewal yet.
+- **CSRF:** every POST/PUT/PATCH/DELETE must carry an `Origin` (or `Referer`) from `CORS_ORIGINS`, otherwise 403. The cookie is also `SameSite=Lax`, `HttpOnly`, and `Secure` when `ENVIRONMENT=production`.
+- **Tenancy:** the business comes from the session. A different `X-Business-Id` is refused with 403 (users have one business until a membership table exists, so `businesses` is not returned and no switcher appears). Every dashboard query filters by that business; tests seed two businesses and assert nothing crosses, including a deliberately corrupt cross-tenant foreign key.
+- **Passwords:** argon2id; login does the same work for unknown emails and returns one message for every failure. Registration returns 409 for a taken email (as the contract specifies), which does reveal that the email is registered.
+- **Rate limit:** login, register and forgot-password are limited per client address (and email) in process memory. This is per worker and trusts the socket address; behind a proxy or several workers it needs Redis and proper forwarded-address handling.
+- **KPIs:** `ai_resolution_rate` and `average_response_seconds` return `null` ("No data yet") until they are defined and recorded. `resolved` counts only `resolved` cases. An agent is `configured` when `config.instructions` is non-empty.
+- **Not implemented:** password reset (no token table or email provider; the endpoint accepts the request and sends nothing), notifications (always empty), search endpoint, business switching, user/employee/department/customer/case CRUD, role-based permission checks on endpoints (all roles can read the dashboard), audit log, email verification, account lockout, session listing/revocation.
+- **Database:** `backend/migrations/0001_initial.sql` is your schema unchanged; `0002` adds `auth_sessions` and the `waiting_department` case status. Both were applied to a real PostgreSQL 16 and the API tests ran against it with `TEST_DATABASE_URL`.

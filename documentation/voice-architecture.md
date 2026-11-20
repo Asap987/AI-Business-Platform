@@ -80,7 +80,7 @@ Not done: written confirmation of OpenAI Zero Data Retention / abuse-monitoring 
 
 1. **No live testing.** Every provider claim above is from documentation or SDK types, not from a real call. First live run should be the opt-in tests (`RUN_LIVE_PROVIDER_TESTS=true`, paid).
 2. **No telephony.** Nothing connects a phone call to the audio sink or STT. Provider choice (Ghana numbers, media streaming) is open.
-3. **No real API or database.** The frontend contract in `frontend-api-contract.md` is not served by any backend yet; the gateway and session store are in memory; schema changes in section 5 are unapplied.
+3. **Backend only partly built.** Login, tenant-scoped dashboard endpoints and the database exist (see `frontend-api-contract.md`), but the voice gateway and session store are still in memory, nothing connects the voice code to the API, and the schema additions in section 5 (messages, usage) are unapplied.
 4. **Language support is unproven** for everything except what tests can show offline; Twi, Ewe and Ga stay unsupported (Option A) and Hausa/French are prototype-only until accuracy tests pass.
 5. **STT has no language-confidence value**, so the low-confidence rule cannot trigger for it.
 6. **Model fallback** (`openai_fast_model`) is configured but not wired into the reasoning adapter; a failed reasoning call goes straight to a human.

@@ -47,6 +47,14 @@ class Settings(BaseSettings):
     )
 
     environment: Literal["development", "test", "production"] = "development"
+    # SQLAlchemy async URL, e.g. postgresql+asyncpg://user:pass@host/db (sqlite+aiosqlite:// is for tests only).
+    database_url: SecretStr | None = None
+    # Exact browser origins allowed to call the API with cookies (never "*").
+    cors_origins: list[str] = ["http://localhost:3000"]
+    session_cookie_name: str = "session"
+    session_ttl_hours: int = Field(default=168, ge=1)
+    auth_rate_limit_attempts: int = Field(default=10, ge=1)
+    auth_rate_limit_window_seconds: int = Field(default=900, ge=1)
 
     # ---- OpenAI (intelligence) -------------------------------------------
     openai_api_key: SecretStr | None = None
