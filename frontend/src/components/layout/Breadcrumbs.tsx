@@ -11,6 +11,8 @@ interface Crumb {
   label: string;
 }
 
+const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function buildCrumbs(pathname: string): Crumb[] {
   const segments = pathname.split("/").filter(Boolean);
   // Every page lives under the Overview root, which is also the dashboard itself.
@@ -20,7 +22,8 @@ function buildCrumbs(pathname: string): Crumb[] {
     if (index === 0 && segment === "dashboard") return;
     crumbs.push({
       href: `/${segments.slice(0, index + 1).join("/")}`,
-      label: ROUTE_LABELS[segment] ?? humanize(decodeURIComponent(segment)),
+      // A record id in the URL is not a readable label.
+      label: UUID_SEGMENT.test(segment) ? "Details" : (ROUTE_LABELS[segment] ?? humanize(decodeURIComponent(segment))),
     });
   });
 

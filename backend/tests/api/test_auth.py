@@ -13,6 +13,7 @@ async def test_register_creates_business_roles_admin_and_httponly_cookie(env, cl
     assert r.status_code == 201
     body = r.json()
     assert body["user"]["email"] == "ama@acme.test" and body["user"]["role"]["name"] == "Administrator"
+    assert body["user"]["role"]["permissions"] == ["*"]  # lets the UI hide actions; the API still enforces them
     assert body["business"]["slug"] == "acme-logistics"
     assert "password" not in r.text and "hash" not in r.text
     cookie = r.headers["set-cookie"].lower()

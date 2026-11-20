@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { ModulePlaceholder } from "@/components/layout/ModulePlaceholder";
+import { CasesView } from "@/features/cases/CasesView";
 
 export const metadata: Metadata = { title: "Cases & Escalations" };
 
 export default function CasesPage() {
-  return <ModulePlaceholder module="cases" />;
+  return <CasesView />;
 }

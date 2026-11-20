@@ -14,6 +14,8 @@ export interface Business {
 export interface Role {
   id: string;
   name: string;
+  /** e.g. "cases:write", or "*" for everything. Used only to hide actions; the backend enforces them. */
+  permissions: string[];
 }
 
 export interface SessionUser {

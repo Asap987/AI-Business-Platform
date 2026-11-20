@@ -4,7 +4,7 @@ import { Eye, EyeOff, Search, X } from "lucide-react";
 import { useId, useState, type InputHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-const FIELD_BASE =
+export const FIELD_BASE =
   "block w-full rounded-lg border bg-surface px-3 text-sm text-ink placeholder:text-muted " +
   "transition-colors disabled:cursor-not-allowed disabled:bg-surface-muted";
 
@@ -18,7 +18,7 @@ interface FieldShellProps {
 }
 
 /** Label + control + hint/error, wired together for screen readers. */
-function FieldShell({ id, label, hint, error, hideLabel, children }: FieldShellProps) {
+export function FieldShell({ id, label, hint, error, hideLabel, children }: FieldShellProps) {
   return (
     <div>
       <label htmlFor={id} className={cn("mb-1.5 block text-sm font-medium text-ink", hideLabel && "sr-only")}>
@@ -38,7 +38,7 @@ function FieldShell({ id, label, hint, error, hideLabel, children }: FieldShellP
   );
 }
 
-function describedBy(id: string, error?: string, hint?: string): string | undefined {
+export function describedBy(id: string, error?: string, hint?: string): string | undefined {
   if (error) return `${id}-error`;
   if (hint) return `${id}-hint`;
   return undefined;

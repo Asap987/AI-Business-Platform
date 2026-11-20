@@ -85,3 +85,12 @@ Not done: a human-readable case reference number (cases are identified by UUID),
 Rules: a department must belong to the same business (422 otherwise); setting an employee `inactive` is refused (409) while they have open cases (reassign first), `on_leave` is allowed, and only `active` employees can be assigned new cases. `has_login` says whether the employee is linked to a user account, but there is no endpoint to create users, link them, or invite staff yet, so an Administrator created at registration is the only login. Permissions: `departments:read|write`, `employees:read|write`. Defaults: Administrator everything; Manager writes both; Employee reads both.
 
 Not done: user invitations and role management, department managers/heads, employee working hours or availability (needed for call routing), bulk import.
+
+## Frontend screens (2026-11-20)
+
+Built and checked in a real browser against the real API on PostgreSQL 16 (25 scripted checks, run by hand; the script is not in the repo): `/cases` (list, filters, search, create), `/cases/{id}` (details, status/priority/department/assignee/resolution notes, history), `/customers` (list, search, add, edit), `/departments` (list, add, edit, delete), `/employees` (list, filters, add, edit).
+
+- `GET /auth/me` and login now include `user.role.permissions` (e.g. `["*"]`, `["cases:read","customers:read"]`). The screens use it only to hide buttons the role cannot use; every action is still checked by the backend. Users without read access to a page get a "Permission denied" message, but the sidebar still lists every page.
+- Pickers (department, assignee) load up to 100 departments/employees; a business with more than 100 would need search-as-you-type pickers.
+- Not built: customer detail page, a customer's case list, editing a case's title or description, creating employee logins, bulk actions, notifications, per-column sorting. The history shows "Team member" rather than a name because the API returns only the user id.
+- The case-status choices offered in the UI mirror the backend's rules; if they ever disagree the backend wins and the UI shows its 409 message.

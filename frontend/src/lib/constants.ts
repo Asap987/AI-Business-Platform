@@ -4,6 +4,7 @@ import {
   Building2,
   ChartColumn,
   LayoutDashboard,
+  Contact,
   LifeBuoy,
   MessageCircle,
   MessageSquareText,
@@ -69,6 +70,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "knowledge", label: "Knowledge Base", href: "/knowledge", icon: BookOpen },
       { id: "workflows", label: "Workflows", href: "/workflows", icon: Workflow },
+      { id: "customers", label: "Customers", href: "/customers", icon: Contact },
       { id: "departments", label: "Departments", href: "/departments", icon: Building2 },
       { id: "employees", label: "Employees", href: "/employees", icon: Users },
     ],
@@ -93,6 +95,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   sms: "SMS Inbox",
   conversations: "Conversations",
   cases: "Cases & Escalations",
+  customers: "Customers",
   knowledge: "Knowledge Base",
   workflows: "Workflows",
   departments: "Departments",

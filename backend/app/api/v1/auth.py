@@ -44,7 +44,8 @@ def _session_response(p: Principal) -> dict:
     return {
         "user": {
             "id": str(p.user.id), "email": p.user.email, "full_name": p.user.full_name, "status": p.user.status,
-            "role": {"id": str(p.role.id), "name": p.role.name},
+            "role": {"id": str(p.role.id), "name": p.role.name,
+                     "permissions": list(p.role.permissions) if isinstance(p.role.permissions, list) else []},
         },
         "business": {"id": str(p.business.id), "name": p.business.name, "slug": p.business.slug},
     }

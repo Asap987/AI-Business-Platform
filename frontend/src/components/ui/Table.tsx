@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
  */
 export function Table({ className, caption, ...rest }: HTMLAttributes<HTMLTableElement> & { caption?: string }) {
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="relative w-full overflow-x-auto">
       <table className={cn("w-full min-w-max border-collapse text-left text-sm", className)} {...rest}>
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         {rest.children}

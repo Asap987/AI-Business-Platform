@@ -72,3 +72,15 @@ export function safeNextPath(next: string | null | undefined, fallback = "/dashb
   if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
   return next;
 }
+
+/**
+ * Whether a role may do something. Mirrors the backend rule: "*" allows all,
+ * and "x:write" also allows "x:read". This only decides what to show; the
+ * backend checks every request again.
+ */
+export function can(permissions: readonly string[] | undefined, needed: string): boolean {
+  if (!permissions) return false;
+  if (permissions.includes("*") || permissions.includes(needed)) return true;
+  const [resource, action] = needed.split(":");
+  return action === "read" && permissions.includes(`${resource}:write`);
+}

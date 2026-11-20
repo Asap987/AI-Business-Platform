@@ -44,6 +44,11 @@ function describe(error: ApiError | string): {
     case "timeout":
       return { title: "Can't reach the server", message: error.message, Icon: WifiOff, retryable: true, signIn: false };
     case "not_found":
+      // The backend answers a missing record with its own message ("Case not found"); only the
+      // framework's bare "Not Found" means the endpoint itself doesn't exist.
+      if (error.message && error.message !== "Not Found" && error.message !== "This resource isn't available yet.") {
+        return { title: "Not found", message: error.message, Icon: CircleAlert, retryable: false, signIn: false };
+      }
       return {
         title: "Not available yet",
         message: "The backend doesn't provide this data yet. It will appear here once it does.",
