@@ -58,3 +58,17 @@ Implemented and tested: `/auth/login|register|logout|me|forgot-password`, `/dash
 - **KPIs:** `ai_resolution_rate` and `average_response_seconds` return `null` ("No data yet") until they are defined and recorded. `resolved` counts only `resolved` cases. An agent is `configured` when `config.instructions` is non-empty.
 - **Not implemented:** password reset (no token table or email provider; the endpoint accepts the request and sends nothing), notifications (always empty), search endpoint, business switching, user/employee/department/customer/case CRUD, role-based permission checks on endpoints (all roles can read the dashboard), audit log, email verification, account lockout, session listing/revocation.
 - **Database:** `backend/migrations/0001_initial.sql` is your schema unchanged; `0002` adds `auth_sessions` and the `waiting_department` case status. Both were applied to a real PostgreSQL 16 and the API tests ran against it with `TEST_DATABASE_URL`.
+
+## Customers and cases (added 2026-11-20; the frontend has no screens for these yet)
+
+| Method | Path | Notes |
+|---|---|---|
+| POST / GET | `/customers` | create (`full_name`, optional `email`, `phone`, `external_ref`); list with `q` (name, email, phone, reference; `%` and `_` are literal), `page`, `page_size` ≤ 100 |
+| GET / PATCH | `/customers/{id}` | PATCH sends only changed fields; `null` clears email/phone/reference |
+| POST / GET | `/cases` | create (`customer_id`, `title`, optional `description`, `priority`, `department_id`, `conversation_id`); list filters `status`, `priority`, `department_id`, `assigned_employee_id`, `customer_id`, `q` |
+| GET / PATCH | `/cases/{id}` | PATCH: `title`, `description`, `priority`, `status`, `department_id`, `assigned_employee_id` (`null` unassigns), `resolution_notes` |
+| GET | `/cases/{id}/events` | append-only history: created, status_changed, assigned, updated; who (`user` / `ai`), when, what changed |
+
+Rules enforced by the backend: every id must belong to the caller's business (otherwise 404 or 422, never confirming another business's record exists); assignees must be active employees; a conversation must belong to the case's customer. Status flow: open, in_progress, waiting_customer and waiting_department move freely among themselves and to resolved; resolving needs resolution notes; resolved can be reopened or closed; closed is final (409). History records which fields changed, not their text. Permissions: `customers:read|write`, `cases:read|write` (write includes read, `*` is everything). Default roles: Administrator `*`; Manager and Employee read and write cases and customers; Auditor-style read-only roles work but there is no endpoint to create roles or users yet. Customers are never merged automatically, not even when phone numbers match.
+
+Not done: a human-readable case reference number (cases are identified by UUID), notes separate from the history, SLA timers, notifications on assignment, concurrent-edit protection (last write wins), employee/department CRUD (assignment works only for employees that already exist in the database).

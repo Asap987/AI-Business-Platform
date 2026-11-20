@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, Uuid
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -47,6 +47,7 @@ class Business(_Stamped, Base):
 
 class Role(_Stamped, Base):
     __tablename__ = "roles"
+    __table_args__ = (UniqueConstraint("business_id", "name"),)
     business_id: Mapped[UUID] = _fk("businesses")
     name: Mapped[str] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text, default=None)
@@ -66,6 +67,7 @@ class User(_Stamped, Base):
 
 class Department(_Stamped, Base):
     __tablename__ = "departments"
+    __table_args__ = (UniqueConstraint("business_id", "name"),)
     business_id: Mapped[UUID] = _fk("businesses")
     name: Mapped[str] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text, default=None)
@@ -85,6 +87,7 @@ class Employee(_Stamped, Base):
 
 class Agent(_Stamped, Base):
     __tablename__ = "agents"
+    __table_args__ = (UniqueConstraint("business_id", "name"),)
     business_id: Mapped[UUID] = _fk("businesses")
     department_id: Mapped[UUID | None] = _fk("departments", True)
     name: Mapped[str] = mapped_column(Text)
@@ -141,3 +144,17 @@ class AuthSession(Base):
     token_hash: Mapped[str] = mapped_column(Text, unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class CaseEvent(Base):
+    """Append-only case history. The SQL migration also blocks UPDATE; rows go away only with their case."""
+
+    __tablename__ = "case_events"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    business_id: Mapped[UUID] = _fk("businesses")
+    case_id: Mapped[UUID] = _fk("cases")
+    actor_user_id: Mapped[UUID | None] = _fk("users", True)
+    actor_kind: Mapped[str] = mapped_column(String, default="user")
+    kind: Mapped[str] = mapped_column(String)
+    detail: Mapped[Any] = mapped_column(Json, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

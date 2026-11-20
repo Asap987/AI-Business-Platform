@@ -60,3 +60,21 @@ async def current_principal(
         raise HTTPException(403, "You do not have access to that business")
     role = await db.get(Role, user.role_id)
     return Principal(user=user, role=role, business=business, session=row)
+
+
+def has_permission(role: Role, needed: str) -> bool:
+    """Roles hold strings like "cases:write". "*" grants everything; "x:write" also grants "x:read"."""
+    held = role.permissions if isinstance(role.permissions, list) else []
+    if "*" in held or needed in held:
+        return True
+    resource, _, action = needed.partition(":")
+    return action == "read" and f"{resource}:write" in held
+
+
+def require(permission: str):
+    async def dependency(principal: Principal = Depends(current_principal)) -> Principal:
+        if not has_permission(principal.role, permission):
+            raise HTTPException(403, "You do not have permission to do that")
+        return principal
+
+    return dependency

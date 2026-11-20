@@ -20,7 +20,7 @@ EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"  # shape check only; deliverabilit
 DEFAULT_ROLES = {
     "Administrator": ["*"],
     "Manager": ["cases:write", "customers:write", "reports:read"],
-    "Employee": ["cases:write", "customers:read"],
+    "Employee": ["cases:write", "customers:write"],
 }
 
 
