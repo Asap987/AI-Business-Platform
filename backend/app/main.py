@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.api.v1 import auth, cases, customers, dashboard
+from app.api.v1 import auth, cases, customers, dashboard, organization
 from app.core.config import Settings, get_settings
 from app.core.security import RateLimiter
 from app.database.connection import make_engine, make_session_factory
@@ -49,6 +49,8 @@ def create_app(settings: Settings | None = None, session_factory: async_sessionm
     app.include_router(dashboard.router, prefix="/api/v1")
     app.include_router(customers.router, prefix="/api/v1")
     app.include_router(cases.router, prefix="/api/v1")
+    app.include_router(organization.departments, prefix="/api/v1")
+    app.include_router(organization.employees, prefix="/api/v1")
 
     @app.get("/health")
     async def health():

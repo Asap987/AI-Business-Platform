@@ -72,3 +72,16 @@ Implemented and tested: `/auth/login|register|logout|me|forgot-password`, `/dash
 Rules enforced by the backend: every id must belong to the caller's business (otherwise 404 or 422, never confirming another business's record exists); assignees must be active employees; a conversation must belong to the case's customer. Status flow: open, in_progress, waiting_customer and waiting_department move freely among themselves and to resolved; resolving needs resolution notes; resolved can be reopened or closed; closed is final (409). History records which fields changed, not their text. Permissions: `customers:read|write`, `cases:read|write` (write includes read, `*` is everything). Default roles: Administrator `*`; Manager and Employee read and write cases and customers; Auditor-style read-only roles work but there is no endpoint to create roles or users yet. Customers are never merged automatically, not even when phone numbers match.
 
 Not done: a human-readable case reference number (cases are identified by UUID), notes separate from the history, SLA timers, notifications on assignment, concurrent-edit protection (last write wins), employee/department CRUD (assignment works only for employees that already exist in the database).
+
+## Departments and employees (added 2026-11-20; no frontend screens yet)
+
+| Method | Path | Notes |
+|---|---|---|
+| POST / GET | `/departments` | name 2–100 chars, unique per business ignoring case (409); list includes `employee_count` and `open_cases` |
+| GET / PATCH / DELETE | `/departments/{id}` | DELETE is refused (409) while any employee or case still points at it, so staff and cases are never silently detached |
+| POST / GET | `/employees` | `full_name`, optional `email`, `phone`, `job_title`, `department_id`, `status` (`active`, `on_leave`, `inactive`); list filters `q`, `department_id`, `status` |
+| GET / PATCH | `/employees/{id}` | `null` clears email/phone/title/department. Employees are deactivated, never deleted, because cases refer to them |
+
+Rules: a department must belong to the same business (422 otherwise); setting an employee `inactive` is refused (409) while they have open cases (reassign first), `on_leave` is allowed, and only `active` employees can be assigned new cases. `has_login` says whether the employee is linked to a user account, but there is no endpoint to create users, link them, or invite staff yet, so an Administrator created at registration is the only login. Permissions: `departments:read|write`, `employees:read|write`. Defaults: Administrator everything; Manager writes both; Employee reads both.
+
+Not done: user invitations and role management, department managers/heads, employee working hours or availability (needed for call routing), bulk import.
