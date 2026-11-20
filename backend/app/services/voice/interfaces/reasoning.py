@@ -11,6 +11,15 @@ from app.services.voice.interfaces.business_tools import ToolDefinition, ToolRes
 from app.services.voice.schemas.voice_session import TranscriptTurn
 
 
+class ToolExchange(BaseModel):
+    """A tool the model asked for earlier in this turn, and what the backend confirmed."""
+
+    call_id: str
+    tool_name: str
+    arguments: dict[str, Any]
+    result: ToolResult
+
+
 class ReasoningRequest(BaseModel):
     business_id: UUID
     session_id: UUID
@@ -21,8 +30,11 @@ class ReasoningRequest(BaseModel):
     history: list[TranscriptTurn]
     user_text: str
     tools: list[ToolDefinition] = Field(default_factory=list)
-    # Results of tools run earlier in this turn, fed back to the model.
-    tool_results: list[tuple[str, ToolResult]] = Field(default_factory=list)
+    # Tools already run for this customer message; replayed so the model can
+    # continue from their confirmed results.
+    tool_exchanges: list[ToolExchange] = Field(default_factory=list)
+    # Extra instruction from the language manager for this reply (e.g. ask the customer to repeat).
+    language_guidance: str | None = None
 
 
 class ReasoningUsage(BaseModel):

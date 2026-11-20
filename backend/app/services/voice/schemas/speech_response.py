@@ -15,7 +15,8 @@ class SpeechChunk(BaseModel):
 class VoiceSettingsOverride(BaseModel):
     """Optional per-business voice tuning (provider adapters map these)."""
 
-    speed: float | None = Field(default=None, ge=0.5, le=2.0)
+    # ElevenLabs accepts 0.7 to 1.2 for speed.
+    speed: float | None = Field(default=None, ge=0.7, le=1.2)
     stability: float | None = Field(default=None, ge=0.0, le=1.0)
     similarity_boost: float | None = Field(default=None, ge=0.0, le=1.0)
 

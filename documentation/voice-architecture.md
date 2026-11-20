@@ -1,6 +1,6 @@
 # Voice AI architecture (OpenAI + ElevenLabs)
 
-Status: **Phases 1–5 done** (audit, design, configuration, provider-independent interfaces, language registry, cost tracking, ElevenLabs speech-to-text adapter). Phases 6–10 (OpenAI reasoning, text-to-speech, conversation pipeline, business integration, full test matrix) are **not built yet**. Nothing here has been run against a live provider; all tests use a fake socket.
+Status: **Phases 1–9 built and tested offline** (audit, design, configuration, interfaces, language registry, cost tracking, ElevenLabs STT, OpenAI reasoning, ElevenLabs TTS, conversation manager with barge-in and human hand-over, in-memory business gateway and session store, data-protection helpers). **140 automated tests pass with no network and no API keys.** **Nothing has been run against a live OpenAI or ElevenLabs account**, there is no telephony, and the real backend API (auth, database-backed services) does not exist yet. See "Limitations" below before describing this to a customer.
 
 ### Phase 5 notes: ElevenLabs STT adapter
 
@@ -58,6 +58,35 @@ ElevenLabs supports none of these for speech recognition or speech generation. T
 
 My recommendation: ship A now, and run a small provider evaluation for B in parallel. Please confirm.
 
+### Phases 6–9 notes
+
+**OpenAI reasoning (`providers/openai_reasoning.py`).** Responses API, streamed, function calling, `store=False`, one tool call at a time, short output cap because replies are spoken. Event and field names were read from the installed SDK's own types and are guarded by a test that fails if the SDK renames them. Tool arguments the model sends that cannot be parsed are never executed. Intent, sentiment and urgency are **not** produced yet.
+
+**ElevenLabs TTS (`providers/elevenlabs_tts.py`).** `stream-input` WebSocket, text sent sentence by sentence with `flush`, audio decoded and forwarded in order, ends on `isFinal`. Closing the iterator or cancelling the task closes the socket (this is barge-in). Shared connection and retry code lives in `providers/elevenlabs_common.py` and the STT adapter was moved onto it with its tests re-run. **Unverified:** the server error-message shape, the list of valid `output_format` values (`pcm_16000` is the default and is configurable, use `ulaw_8000` for telephony only after testing), and whether `language_code` is accepted by each model (not sent).
+
+**Conversation manager (`conversation_manager.py`).** One customer utterance → language decision → reasoning → tools → speech → audio sink. A new utterance or `interrupt()` cancels reasoning and speech together and records the AI turn as interrupted. At most three tool rounds. A tool the model was not offered is refused; a tool that crashes is reported to the model as failed. Any provider failure, a missing voice, or too many tool rounds triggers a human hand-over through the gateway and the session is flagged `ESCALATING` for the telephony layer. Unsupported language: never guessed, alternatives offered, hand-over after two attempts.
+
+**Business gateway (`business_gateway.py`) and session store (`session_store.py`).** In-memory prototype only. Tools: `search_knowledge`, `create_case`, `escalate_to_human`. Every call is scoped to the business, arguments are validated, an unknown business, disabled tool and nonexistent tool all produce the same refusal, and tests prove knowledge, cases and sessions never cross businesses. The store enforces per-business concurrent-session and new-sessions-per-minute limits and ends silent or overlong sessions. A real gateway must call the real services behind the same interface and add per-user permissions and approval for financial actions (not built).
+
+### Data protection (priority) — what is and is not done
+
+Done and tested: keys only in headers or `SecretStr`, never in URLs, logs or error text; provider error text is never copied into our errors; a test proves transcript text does not reach the logs; OpenAI `store=False`; recording off by default and consent required; card numbers (Luhn-checked) and spoken passwords/PINs/codes are removed before text goes to OpenAI (`privacy.py`; optional masking of emails and phone numbers via `VOICE_REDACT_CONTACT_DETAILS`); per-provider shutdown switch (`ProviderControls`), after which requests fail as non-recoverable and the call is handed to a person; `ELEVENLABS_ENABLE_LOGGING=false` sends `enable_logging=false`; ended sessions can be discarded from memory.
+
+Verified from the ElevenLabs page (2026-11-20): Zero Retention Mode is per request via `enable_logging=false`, **enterprise-only**, and "the TTS WebSocket connection" is covered. The page does **not** confirm the parameter on the `stream-input` URL or on the realtime speech-to-text socket. Sending it on an ineligible account may be ignored or rejected: confirm with ElevenLabs in writing and test with the account before promising "zero retention" to any customer.
+
+Not done: written confirmation of OpenAI Zero Data Retention / abuse-monitoring terms; vendor register and data-processing agreements; data classification enforced in code; the Control Center "Provider Privacy" screen; encryption, backups, row-level security and audit-log storage (no database layer exists yet); retention deletion jobs; incident-response procedure; legal review under Ghana's Data Protection Act, 2012 (Act 843). Redaction is a safety net, not a guarantee: free speech can contain identifiers the patterns miss.
+
+### Limitations and remaining work
+
+1. **No live testing.** Every provider claim above is from documentation or SDK types, not from a real call. First live run should be the opt-in tests (`RUN_LIVE_PROVIDER_TESTS=true`, paid).
+2. **No telephony.** Nothing connects a phone call to the audio sink or STT. Provider choice (Ghana numbers, media streaming) is open.
+3. **No real API or database.** The frontend contract in `frontend-api-contract.md` is not served by any backend yet; the gateway and session store are in memory; schema changes in section 5 are unapplied.
+4. **Language support is unproven** for everything except what tests can show offline; Twi, Ewe and Ga stay unsupported (Option A) and Hausa/French are prototype-only until accuracy tests pass.
+5. **STT has no language-confidence value**, so the low-confidence rule cannot trigger for it.
+6. **Model fallback** (`openai_fast_model`) is configured but not wired into the reasoning adapter; a failed reasoning call goes straight to a human.
+7. **No model-quality testing** (prompt-injection resistance, hallucination rate): the prompt contains the rules; only the fake-model plumbing is tested.
+8. Voice IDs, pricing rates and per-business context assembly are caller-supplied; no approved voices are configured.
+
 ## 5. Proposed database changes (not applied)
 
 The existing schema has `conversations` and `cases` but nothing to hold what was said or what a call cost. Proposed additions: `conversation_messages` (conversation_id, speaker, text, language, interrupted, created_at); `voice_usage` (business_id, conversation_id, stt_seconds, tts_characters, tokens per model, provider_errors, estimated_cost_usd, rates_used JSONB); `conversations.language_code` and `recording_consent`; `cases.status` needs a `waiting_department` value because the dashboard and the escalation flow both need it. These will be written as migrations when the backend's migration tooling exists.
@@ -70,10 +99,18 @@ backend/app/services/voice/
   schemas/        transcription, speech_response, voice_session
   interfaces/     speech_to_text, text_to_speech, reasoning, business_tools
   errors.py                                     provider-neutral ProviderError
+  providers/elevenlabs_common.py                shared connect/retry code
   providers/elevenlabs_stt.py                   realtime speech-to-text adapter
+  providers/elevenlabs_tts.py                   streaming text-to-speech adapter
+  providers/openai_reasoning.py                 Responses API adapter
+  prompts.py                                    system prompt and safety rules
+  privacy.py                                    redaction + provider shutdown switch
+  conversation_manager.py                       turn loop, barge-in, hand-over
+  business_gateway.py                           in-memory tenant-scoped tools (prototype)
+  session_store.py                              in-memory sessions, limits, timeouts
   language_manager.py                           registry + language decisions
   usage.py                                      usage records + cost estimate
-backend/tests/voice/                            58 tests, no network, no API keys
+backend/tests/voice/                            140 tests, no network, no API keys
 backend/.env.example
 ```
 
@@ -81,12 +118,7 @@ Run the tests: `cd backend && pip install -r requirements.txt && python -m pytes
 
 ## 7. Next phases
 
-5. ~~ElevenLabs STT adapter~~ done (see Phase 5 notes above).
-6. OpenAI reasoning adapter (Responses API streaming + function calling; system prompt that forbids inventing policy or claiming unconfirmed outcomes).
-7. ElevenLabs TTS adapter (streaming, cancellation).
-8. Conversation manager and session store: turn-taking, barge-in, timeouts, graceful failure → human transfer.
-9. Business gateway implementation once the knowledge, cases and departments services exist.
-10. Test matrix from the brief, opt-in live tests (`RUN_LIVE_PROVIDER_TESTS=true`, clearly marked as paid).
+Phases 5–9 are done (offline). Remaining: opt-in live provider tests (paid, with explicit approval); the real backend API and database; telephony adapter and call lifecycle; wiring model fallback; the Control Center provider-privacy screen; accuracy tests per language.
 
 ## 8. Before connecting real phone numbers
 

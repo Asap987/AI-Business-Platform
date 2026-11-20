@@ -25,15 +25,23 @@ import base64
 import json
 import logging
 import re
-from collections.abc import AsyncIterator, Awaitable, Callable
-from typing import Any, Protocol
+from collections.abc import AsyncIterator
+from typing import Any
 from urllib.parse import urlencode
 
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
 from app.core.config import Settings
 from app.services.voice.errors import ProviderError
+from app.services.voice.privacy import ProviderControls
 from app.services.voice.interfaces.speech_to_text import SpeechToText, STTStream
+from app.services.voice.providers.elevenlabs_common import (
+    Connector,
+    Socket as _Socket,
+    connect_with_retries,
+    default_connect,
+    parse_json as _parse_json,
+)
 from app.services.voice.schemas.transcription import STTStreamConfig, TranscriptEvent
 
 logger = logging.getLogger(__name__)
@@ -64,13 +72,6 @@ _ERROR_TYPES = _NON_RECOVERABLE | {
 }
 
 
-class _Socket(Protocol):
-    async def send(self, message: str) -> None: ...
-    async def recv(self) -> str | bytes: ...
-    async def close(self) -> None: ...
-
-
-Connector = Callable[[str, dict[str, str]], Awaitable[_Socket]]
 
 
 def audio_format_for(config: STTStreamConfig) -> str:
@@ -90,14 +91,6 @@ def _canonical(message_type: str) -> str:
     s = re.sub(r"^scribe_?", "", s)
     s = re.sub(r"_?error$", "", s)
     return s or "error"
-
-
-def _parse(raw: str | bytes) -> dict[str, Any] | None:
-    try:
-        data = json.loads(raw)
-    except (ValueError, TypeError):
-        return None
-    return data if isinstance(data, dict) else None
 
 
 def _error_from(message_type: str, msg: dict[str, Any]) -> ProviderError | None:
@@ -192,7 +185,7 @@ class ElevenLabsSTTStream(STTStream):
                     pending = None
                     continue
 
-                msg = _parse(raw)
+                msg = _parse_json(raw)
                 mtype = msg.get("message_type") if msg else None
                 if msg is None or not isinstance(mtype, str):
                     continue
@@ -273,13 +266,17 @@ class ElevenLabsSTT(SpeechToText):
         settings: Settings,
         connector: Connector | None = None,
         retry_backoff_seconds: float = 0.2,
+        controls: ProviderControls | None = None,
     ) -> None:
+        self._controls = controls
         self._settings = settings
         self._connector = connector or self._default_connector
         self._backoff = retry_backoff_seconds
 
     # ---- configuration ----------------------------------------------------
     def _api_key(self) -> str:
+        if self._controls is not None:
+            self._controls.require(PROVIDER)
         key = self._settings.elevenlabs_api_key
         if key is None or not key.get_secret_value():
             raise ProviderError(PROVIDER, "not_configured", "ELEVENLABS_API_KEY is not set.", recoverable=False)
@@ -301,39 +298,23 @@ class ElevenLabsSTT(SpeechToText):
         }
         if config.language_hint:
             params["language_code"] = config.language_hint
+        if not self._settings.elevenlabs_enable_logging:
+            params["enable_logging"] = "false"
         return f"{self._settings.elevenlabs_stt_url}?{urlencode(params)}"
 
     async def _default_connector(self, url: str, headers: dict[str, str]) -> _Socket:
-        from websockets.asyncio.client import connect  # imported lazily: only needed live
-
-        return await connect(url, additional_headers=headers, max_size=2**20)  # type: ignore[return-value]
+        return await default_connect(url, headers)
 
     # ---- opening ----------------------------------------------------------
     async def _connect(self, url: str, key: str) -> _Socket:
-        """One model, with bounded retries for recoverable connection failures."""
-        attempts = self._settings.elevenlabs_max_retries + 1
-        last: ProviderError | None = None
-        for attempt in range(attempts):
-            try:
-                return await asyncio.wait_for(
-                    self._connector(url, {"xi-api-key": key}),
-                    self._settings.elevenlabs_request_timeout_seconds,
-                )
-            except asyncio.TimeoutError:
-                last = ProviderError(PROVIDER, "connect_timeout", "Timed out connecting.", recoverable=True)
-            except Exception as exc:
-                status = getattr(getattr(exc, "response", None), "status_code", None)
-                if status in (401, 403):
-                    raise ProviderError(
-                        PROVIDER, "auth", "ElevenLabs rejected the API key.", recoverable=False
-                    ) from exc
-                last = ProviderError(
-                    PROVIDER, "connect_failed", f"Could not connect ({type(exc).__name__}).", recoverable=True
-                )
-            if attempt < attempts - 1:
-                await asyncio.sleep(self._backoff * (2**attempt))
-        assert last is not None
-        raise last
+        return await connect_with_retries(
+            self._connector,
+            url,
+            key,
+            timeout_seconds=self._settings.elevenlabs_request_timeout_seconds,
+            max_retries=self._settings.elevenlabs_max_retries,
+            backoff_seconds=self._backoff,
+        )
 
     async def open_stream(self, config: STTStreamConfig) -> STTStream:
         key = self._api_key()
@@ -374,7 +355,7 @@ class ElevenLabsSTT(SpeechToText):
             return False
         try:
             raw = await asyncio.wait_for(socket.recv(), self._settings.elevenlabs_request_timeout_seconds)
-            msg = _parse(raw)
+            msg = _parse_json(raw)
             return bool(msg and msg.get("message_type") == "session_started")
         except Exception:
             return False

@@ -5,6 +5,7 @@ from app.services.voice.interfaces.reasoning import (
     ReasoningUsage,
     TextDelta,
     ToolCallRequested,
+    ToolExchange,
     TurnCompleted,
 )
 from app.services.voice.interfaces.speech_to_text import SpeechToText, STTStream
@@ -21,6 +22,7 @@ __all__ = [
     "TextToSpeech",
     "ToolCallRequested",
     "ToolDefinition",
+    "ToolExchange",
     "ToolResult",
     "TurnCompleted",
 ]

@@ -65,6 +65,21 @@ class Settings(BaseSettings):
     elevenlabs_request_timeout_seconds: float = 15.0
     elevenlabs_max_retries: int = 2
     elevenlabs_stt_url: str = "wss://api.elevenlabs.io/v1/speech-to-text/realtime"
+    elevenlabs_tts_url_template: str = "wss://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream-input"
+    # Not confirmed against the docs' format list; override per deployment (e.g. ulaw_8000 for telephony).
+    elevenlabs_tts_output_format: str = "pcm_16000"
+    elevenlabs_tts_inactivity_timeout_seconds: int = Field(default=20, ge=1, le=180)
+    elevenlabs_tts_health_voice_id: str | None = None
+    # False sends enable_logging=false (ElevenLabs "Zero Retention Mode"). The docs say this is
+    # enterprise-only and per request; they confirm TTS WebSocket coverage in general terms but do
+    # not confirm the parameter on stream-input or on the realtime STT socket. Verify with the
+    # account before relying on it.
+    elevenlabs_enable_logging: bool = True
+    # Redact card numbers and spoken passwords/PINs before text goes to the reasoning provider.
+    voice_redact_secrets: bool = True
+    # Also mask email addresses and phone numbers. Off by default: the assistant needs them
+    # to log a case. Turn on for businesses that do not need contact details captured by voice.
+    voice_redact_contact_details: bool = False
     # "vad", "manual" or "turn_prediction". Unset: turn_prediction for
     # scribe_v3_live, vad otherwise. Documented values; turn_prediction on a
     # given model still needs confirming in a live test.

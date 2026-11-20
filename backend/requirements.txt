@@ -1,6 +1,7 @@
 pydantic>=2.7
 pydantic-settings>=2.3
 websockets>=14
+openai>=3.57,<4
 
 # Test tooling
 pytest>=8
