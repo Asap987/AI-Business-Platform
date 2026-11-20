@@ -64,6 +64,14 @@ class Settings(BaseSettings):
     elevenlabs_tts_expressive_model: str = "eleven_v3"  # needed for Hausa; slower
     elevenlabs_request_timeout_seconds: float = 15.0
     elevenlabs_max_retries: int = 2
+    elevenlabs_stt_url: str = "wss://api.elevenlabs.io/v1/speech-to-text/realtime"
+    # "vad", "manual" or "turn_prediction". Unset: turn_prediction for
+    # scribe_v3_live, vad otherwise. Documented values; turn_prediction on a
+    # given model still needs confirming in a live test.
+    elevenlabs_stt_commit_strategy: str | None = None
+    # With language detection on, the final language arrives in a message just
+    # after the committed text; wait this long for it before emitting without.
+    elevenlabs_stt_final_merge_wait_seconds: float = Field(default=0.3, ge=0.0)
 
     # ---- Voice sessions ---------------------------------------------------
     voice_default_language: str = "en"

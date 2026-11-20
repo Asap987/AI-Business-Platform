@@ -1,6 +1,14 @@
 # Voice AI architecture (OpenAI + ElevenLabs)
 
-Status: **Phases 1–4 done** (audit, design, configuration, provider-independent interfaces, language registry, cost tracking). Phases 5–10 (the real provider adapters, the conversation pipeline, business integration) are **not built yet**. Nothing here has been run against a live provider.
+Status: **Phases 1–5 done** (audit, design, configuration, provider-independent interfaces, language registry, cost tracking, ElevenLabs speech-to-text adapter). Phases 6–10 (OpenAI reasoning, text-to-speech, conversation pipeline, business integration, full test matrix) are **not built yet**. Nothing here has been run against a live provider; all tests use a fake socket.
+
+### Phase 5 notes: ElevenLabs STT adapter
+
+Built on the raw realtime WebSocket protocol (documented in full) rather than the Python SDK, whose documented surface is callback-based and only shown for URL streaming. Verified against the API reference: endpoint, `xi-api-key` header auth, `input_audio_chunk`/`audio_base_64` messages, `session_started`/`partial_transcript`/`committed_transcript`/`committed_transcript_with_timestamps`, error message types.
+
+Behaviour: only `is_final` transcripts should be acted on; the final language comes from `committed_transcript_with_timestamps` (the adapter waits a short, configurable time for it, then emits without); bounded connection retries with backoff; fallback from `scribe_v3_live` to `scribe_v2_realtime` if the primary cannot connect (not on a bad key); errors become provider-neutral `ProviderError`s with a `recoverable` flag so the conversation manager can retry, fall back or transfer to a human. API keys travel only in a header and are never logged.
+
+**Unverified, to confirm in the opt-in live test:** whether `turn_prediction` is accepted for `scribe_v3_live` (the default for that model; `vad` is documented for all); the accepted format of the `language_code` hint (ISO 639-1 vs 639-3); the format of the `keyterms` parameter (not sent yet, so business vocabulary does not bias recognition yet); and whether a connect-only health check counts as a billed session. The realtime stream has **no language-confidence value**, so the low-confidence clarification rule in `LanguageManager` cannot trigger for this provider; unreliable language is instead visible as `language_code` being absent or changing.
 
 ## 1. Audit of the existing project (2026-11-19)
 
@@ -61,9 +69,11 @@ backend/app/core/config.py                     settings, secrets as SecretStr, p
 backend/app/services/voice/
   schemas/        transcription, speech_response, voice_session
   interfaces/     speech_to_text, text_to_speech, reasoning, business_tools
+  errors.py                                     provider-neutral ProviderError
+  providers/elevenlabs_stt.py                   realtime speech-to-text adapter
   language_manager.py                           registry + language decisions
   usage.py                                      usage records + cost estimate
-backend/tests/voice/                            27 tests, no network, no API keys
+backend/tests/voice/                            58 tests, no network, no API keys
 backend/.env.example
 ```
 
@@ -71,7 +81,7 @@ Run the tests: `cd backend && pip install -r requirements.txt && python -m pytes
 
 ## 7. Next phases
 
-5. ElevenLabs STT adapter (after verifying the realtime protocol), with a mocked-socket test suite.
+5. ~~ElevenLabs STT adapter~~ done (see Phase 5 notes above).
 6. OpenAI reasoning adapter (Responses API streaming + function calling; system prompt that forbids inventing policy or claiming unconfirmed outcomes).
 7. ElevenLabs TTS adapter (streaming, cancellation).
 8. Conversation manager and session store: turn-taking, barge-in, timeouts, graceful failure → human transfer.
