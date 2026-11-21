@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+/*
+ * Theme tokens.
+ *
+ * Components only use the semantic names below (bg-surface, text-ink, ...),
+ * never raw hex values. Dark mode can be added later by filling in the
+ * [data-theme="dark"] block and setting that attribute on <html>; no
+ * component needs to change. It is intentionally not wired up yet.
+ */
+:root {
+  --canvas: #f6f8fa;
+  --surface: #ffffff;
+  --surface-muted: #f0f3f6;
+  --border: #dde3ea;
+  --border-strong: #c5cfda;
+
+  --ink: #202b38;
+  --muted: #6b7785;
+
+  --primary: #17243a;
+  --primary-hover: #223452;
+  --on-primary: #ffffff;
+
+  --secondary: #405a78;
+
+  /* Teal from the brand palette, for icons, indicators and focus rings. */
+  --accent: #159b8c;
+  /* Darker teal for text and filled buttons so white text keeps >= 4.5:1. */
+  --accent-strong: #0e7a6e;
+  --accent-soft: #e3f4f1;
+
+  --success: #1a7f4b;
+  --success-soft: #e4f5ec;
+  --warning: #9a5b00;
+  --warning-soft: #fdf0d8;
+  --danger: #b42318;
+  --danger-soft: #fdeceb;
+  --info: #2a5db0;
+  --info-soft: #e7eefb;
+
+  /* Sidebar chrome (deep navy). */
+  --sidebar: #17243a;
+  --sidebar-hover: #223452;
+  --sidebar-active: #2b4063;
+  --sidebar-text: #c9d3e0;
+  --sidebar-text-strong: #ffffff;
+  --sidebar-muted: #8fa0b6;
+  --sidebar-border: #2b3c58;
+
+  --shadow-card: 0 1px 2px rgb(23 36 58 / 0.05);
+  --shadow-pop: 0 8px 24px rgb(23 36 58 / 0.12);
+}
+
+/* Reserved for the future dark theme. Not enabled anywhere yet. */
+[data-theme="dark"] {
+  --canvas: #0f1722;
+  --surface: #17212f;
+  --surface-muted: #1d2a3b;
+  --border: #2a3a50;
+  --border-strong: #3a4d68;
+  --ink: #e6ebf2;
+  --muted: #9aa8b9;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-secondary: var(--secondary);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-text: var(--sidebar-text);
+  --color-sidebar-text-strong: var(--sidebar-text-strong);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* One consistent, visible keyboard focus ring across the app. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Respect users who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+dialog::backdrop {
+  background: rgb(23 36 58 / 0.45);
+}
