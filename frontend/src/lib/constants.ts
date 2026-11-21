@@ -26,6 +26,8 @@ export interface NavChild {
   label: string;
   href: string;
   icon: LucideIcon;
+  /** Permission needed to see this link (UX only: the backend enforces). Omit for everyone. */
+  permission?: string;
 }
 
 export interface NavItem {
@@ -35,6 +37,8 @@ export interface NavItem {
   icon: LucideIcon;
   children?: NavChild[];
   badgeKey?: NavBadgeKey;
+  /** Permission needed to see this item (UX only: the backend enforces). Omit for everyone. */
+  permission?: string;
 }
 
 export interface NavGroup {
@@ -60,21 +64,21 @@ export const NAV_GROUPS: NavGroup[] = [
           { id: "calls", label: "Calls", href: "/communication/calls", icon: PhoneCall },
           { id: "sms", label: "SMS Inbox", href: "/communication/sms", icon: MessageSquareText },
           { id: "conversations", label: "Conversations", href: "/communication/conversations", icon: MessageCircle },
-          { id: "voice-test", label: "Voice test", href: "/communication/voice-test", icon: Mic },
+          { id: "voice-test", label: "Voice test", href: "/communication/voice-test", icon: Mic, permission: "voice:use" },
         ],
       },
-      { id: "cases", label: "Cases & Escalations", href: "/cases", icon: LifeBuoy },
+      { id: "cases", label: "Cases & Escalations", href: "/cases", icon: LifeBuoy, permission: "cases:read" },
     ],
   },
   {
     id: "operations",
     label: "Business Operations",
     items: [
-      { id: "knowledge", label: "Knowledge Base", href: "/knowledge", icon: BookOpen },
+      { id: "knowledge", label: "Knowledge Base", href: "/knowledge", icon: BookOpen, permission: "knowledge:read" },
       { id: "workflows", label: "Workflows", href: "/workflows", icon: Workflow },
-      { id: "customers", label: "Customers", href: "/customers", icon: Contact },
-      { id: "departments", label: "Departments", href: "/departments", icon: Building2 },
-      { id: "employees", label: "Employees", href: "/employees", icon: Users },
+      { id: "customers", label: "Customers", href: "/customers", icon: Contact, permission: "customers:read" },
+      { id: "departments", label: "Departments", href: "/departments", icon: Building2, permission: "departments:read" },
+      { id: "employees", label: "Employees", href: "/employees", icon: Users, permission: "employees:read" },
     ],
   },
   {

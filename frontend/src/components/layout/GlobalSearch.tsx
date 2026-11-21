@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { NAV_GROUPS } from "@/lib/constants";
+import { useVisibleNav } from "@/hooks/useVisibleNav";
+import type { NavGroup } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 interface SearchEntry {
@@ -15,22 +16,26 @@ interface SearchEntry {
   section: string;
 }
 
-/** The only data searched today is the app's own pages; see the notice below. */
-const ENTRIES: SearchEntry[] = NAV_GROUPS.flatMap((group) =>
-  group.items.flatMap((item) => [
-    { id: item.id, label: item.label, href: item.children ? item.children[0].href : item.href, section: group.label },
-    ...(item.children ?? []).map((child) => ({
-      id: child.id,
-      label: `${item.label} › ${child.label}`,
-      href: child.href,
-      section: group.label,
-    })),
-  ]),
-);
+/** The only data searched today is the app's own pages (the ones this role may open); see the notice below. */
+function entriesFor(groups: NavGroup[]): SearchEntry[] {
+  return groups.flatMap((group) =>
+    group.items.flatMap((item) => [
+      { id: item.id, label: item.label, href: item.children ? item.children[0].href : item.href, section: group.label },
+      ...(item.children ?? []).map((child) => ({
+        id: child.id,
+        label: `${item.label} › ${child.label}`,
+        href: child.href,
+        section: group.label,
+      })),
+    ]),
+  );
+}
 
 function SearchPanel({ onNavigate, autoFocus = false }: { onNavigate?: () => void; autoFocus?: boolean }) {
   const router = useRouter();
+  const groups = useVisibleNav();
   const [query, setQuery] = useState("");
+  const entries = useMemo(() => entriesFor(groups), [groups]);
   const uid = useId();
   const inputId = `${uid}-search`;
   const noteId = `${uid}-search-note`;
@@ -38,8 +43,8 @@ function SearchPanel({ onNavigate, autoFocus = false }: { onNavigate?: () => voi
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return ENTRIES.filter((entry) => entry.label.toLowerCase().includes(q)).slice(0, 8);
-  }, [query]);
+    return entries.filter((entry) => entry.label.toLowerCase().includes(q)).slice(0, 8);
+  }, [query, entries]);
 
   // Called after a result is chosen. Links navigate on their own; Enter uses router.push.
   const done = () => {
