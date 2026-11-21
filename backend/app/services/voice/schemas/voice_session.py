@@ -70,6 +70,7 @@ class VoiceSession(BaseModel):
     unsupported_language_attempts: int = 0
     voice_id: str | None = None
     recording_consent: bool = False
+    redact_contact_details: bool | None = None  # business privacy setting; None = platform default
     transcript: list[TranscriptTurn] = Field(default_factory=list)
     tool_history: list[ToolCallRecord] = Field(default_factory=list)
     escalation: EscalationStatus = Field(default_factory=EscalationStatus)

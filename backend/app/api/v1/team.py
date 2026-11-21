@@ -15,6 +15,7 @@ from app.api.v1.auth import EMAIL_PATTERN, _limit, _session_response, _start_ses
 from app.api.v1.deps import Principal, get_db, get_settings_dep, require
 from app.core.config import Settings
 from app.core.security import hash_password, new_session_token, token_digest
+from app.services import audit
 from app.database.models import AuthSession, Business, Employee, Role, User, UserInvite
 
 router = APIRouter(tags=["team"])
@@ -111,6 +112,8 @@ async def create_invite(body: InviteIn, p: Principal = Depends(require("users:wr
                      token_hash=token_digest(token), invited_by=p.user.id,
                      expires_at=datetime.now(timezone.utc) + timedelta(days=INVITE_DAYS))
     db.add(inv)
+    await db.flush()
+    audit.record(db, p.business_id, p.user.id, "invite.created", invite_id=inv.id, email=body.email, role_id=body.role_id)
     await db.commit()
     # The token is returned this once and never again; only its hash is stored.
     return {"id": str(inv.id), "email": inv.email, "token": token, "expires_at": inv.expires_at.isoformat()}
@@ -122,6 +125,7 @@ async def revoke_invite(invite_id: UUID, p: Principal = Depends(require("users:w
         UserInvite.id == invite_id, UserInvite.business_id == p.business_id, UserInvite.accepted_at.is_(None)))
     if res.rowcount == 0:
         raise HTTPException(404, "Invitation not found")
+    audit.record(db, p.business_id, p.user.id, "invite.revoked", invite_id=invite_id)
     await db.commit()
     return Response(status_code=204)
 
@@ -153,6 +157,9 @@ async def update_user(user_id: UUID, body: UserPatch, p: Principal = Depends(req
             User.business_id == p.business_id, User.status == "active"))).all()
         if sum(1 for _, r in admins if _is_admin(r)) <= 1:
             raise HTTPException(409, "At least one active administrator must remain")
+    audit.record(db, p.business_id, p.user.id, "user.updated", user_id=u.id,
+                 **({"role": f"{role.name} -> {new_role.name}"} if new_role.id != role.id else {}),
+                 **({"status": f"{u.status} -> {new_status}"} if new_status != u.status else {}))
     u.role_id, u.status = new_role.id, new_status
     if new_status != "active":
         await db.execute(delete(AuthSession).where(AuthSession.user_id == u.id))  # sign them out everywhere now
@@ -212,6 +219,7 @@ async def accept_invite(body: AcceptIn, request: Request, response: Response, db
     if emp is not None and emp.user_id is None and emp.business_id == inv.business_id:
         emp.user_id = user.id
     inv.accepted_at = datetime.now(timezone.utc)
+    audit.record(db, inv.business_id, user.id, "invite.accepted", invite_id=inv.id, user_id=user.id)
     await _start_session(db, user, business.id, response, settings)
     await db.commit()
     return _session_response(Principal(user=user, role=role, business=business, session=None))  # type: ignore[arg-type]

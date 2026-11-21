@@ -35,6 +35,8 @@ class ReasoningRequest(BaseModel):
     tool_exchanges: list[ToolExchange] = Field(default_factory=list)
     # Extra instruction from the language manager for this reply (e.g. ask the customer to repeat).
     language_guidance: str | None = None
+    # Per-business override of contact-detail masking; None means use the platform setting.
+    redact_contact_details: bool | None = None
 
 
 class ReasoningUsage(BaseModel):

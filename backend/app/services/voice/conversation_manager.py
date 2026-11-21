@@ -221,6 +221,7 @@ class ConversationManager:
                         language_code=session.language_code, business_context=business_context,
                         history=session.transcript[:-1], user_text=text, tools=tools,
                         tool_exchanges=exchanges, language_guidance=guidance,
+                        redact_contact_details=session.redact_contact_details,
                     )
                     pending = None
                     async for event in self._reasoning.respond_stream(request):

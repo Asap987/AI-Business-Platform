@@ -115,3 +115,18 @@ export interface KnowledgeHit {
   text: string;
   score: number;
 }
+
+export interface PrivacySettings {
+  ai_providers_enabled: boolean;
+  redact_contact_details: boolean;
+  redact_secrets: boolean;
+  updated_at: string | null;
+}
+
+export interface AuditEntry {
+  id: string;
+  action: string;
+  actor_name: string | null;
+  detail: Record<string, unknown>;
+  created_at: string;
+}

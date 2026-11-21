@@ -27,6 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import Principal, get_db, has_permission, principal_from_token, require
+from app.api.v1.privacy import load_privacy
 from app.database.models import Agent, Department
 from app.services.voice.call_runner import MAX_FRAME_BYTES, CallRunner
 from app.services.voice.errors import ProviderError
@@ -92,6 +93,7 @@ async def test_call(ws: WebSocket, agent_id: UUID | None = None):
                 return
             cfg = agent.config if isinstance(agent.config, dict) else {}
             voice_id = cfg.get("voice_id") or voice_id
+        privacy = await load_privacy(db, business_id)
         context = await _business_context(db, business_id, business_name)
 
     await ws.accept()
@@ -99,11 +101,15 @@ async def test_call(ws: WebSocket, agent_id: UUID | None = None):
     if stack is None:
         await _refuse(ws, "voice_not_enabled", WS_TRY_LATER)
         return
+    if privacy is not None and not privacy.ai_providers_enabled:  # the business switched AI providers off
+        await _refuse(ws, "ai_disabled_by_business", WS_POLICY)
+        return
     if not voice_id:
         await _refuse(ws, "no_voice_configured", WS_TRY_LATER)
         return
     try:
-        session = stack.store.create(business_id, agent_id=agent.id if agent else None, voice_id=voice_id, language_code=settings.voice_default_language)
+        session = stack.store.create(business_id, agent_id=agent.id if agent else None, voice_id=voice_id, language_code=settings.voice_default_language,
+                                   redact_contact_details=privacy.redact_contact_details if privacy else None)
     except SessionLimitError:
         await _refuse(ws, "too_many_calls", WS_TRY_LATER)
         return

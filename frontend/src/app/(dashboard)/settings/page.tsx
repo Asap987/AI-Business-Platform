@@ -1,4 +1,4 @@
-import { Building2, User, UserCog, Users } from "lucide-react";
+import { Building2, ShieldCheck, User, UserCog, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -10,6 +10,7 @@ const SECTIONS = [
   { href: "/settings/profile", title: "My Profile", description: "Your name and contact details.", icon: User },
   { href: "/settings/account", title: "Account Settings", description: "Password and sign-in security.", icon: UserCog },
   { href: "/settings/team", title: "Team", description: "Invite staff, change roles, disable logins.", icon: Users },
+  { href: "/settings/privacy", title: "Privacy & AI", description: "Control AI providers, masking and the activity log.", icon: ShieldCheck },
   { href: "/settings/business", title: "Business Settings", description: "Business details and preferences.", icon: Building2 },
 ] as const;
 

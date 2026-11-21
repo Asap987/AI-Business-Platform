@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -194,3 +194,24 @@ class KnowledgeChunk(Base):
     document_id: Mapped[UUID] = _fk("knowledge_documents")
     position: Mapped[int] = mapped_column(Integer)
     text: Mapped[str] = mapped_column(Text)
+
+
+class BusinessPrivacy(Base):
+    __tablename__ = "business_privacy"
+    business_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True)
+    ai_providers_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    redact_contact_details: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_by: Mapped[UUID | None] = _fk("users", True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class AuditEvent(Base):
+    """Append-only (the SQL migration blocks UPDATE). Holds field names and ids, never message text or secrets."""
+
+    __tablename__ = "audit_events"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    business_id: Mapped[UUID] = _fk("businesses")
+    actor_user_id: Mapped[UUID | None] = _fk("users", True)
+    action: Mapped[str] = mapped_column(String)
+    detail: Mapped[Any] = mapped_column(Json, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

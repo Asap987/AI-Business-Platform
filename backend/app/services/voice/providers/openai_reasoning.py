@@ -107,7 +107,8 @@ class OpenAIReasoning(ReasoningEngine):
             return redact_for_provider(
                 text,
                 secrets=self._settings.voice_redact_secrets,
-                contact_details=self._settings.voice_redact_contact_details,
+                contact_details=(self._settings.voice_redact_contact_details if request.redact_contact_details is None
+                                 else request.redact_contact_details),
             )
 
         for turn in request.history:
