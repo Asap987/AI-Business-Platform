@@ -7,15 +7,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.api.v1 import auth, cases, customers, dashboard, knowledge, organization, team
+from app.api.v1 import auth, cases, customers, dashboard, knowledge, organization, team, voice
 from app.core.config import Settings, get_settings
 from app.core.security import RateLimiter
 from app.database.connection import make_engine, make_session_factory
+from app.services.voice.stack import VoiceStack, build_voice_stack
 
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 
 
-def create_app(settings: Settings | None = None, session_factory: async_sessionmaker[AsyncSession] | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, session_factory: async_sessionmaker[AsyncSession] | None = None,
+               voice_stack: VoiceStack | None = None) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(title="AI Business Platform API", docs_url=None if settings.environment == "production" else "/docs")
     app.state.settings = settings
@@ -23,6 +25,8 @@ def create_app(settings: Settings | None = None, session_factory: async_sessionm
     if session_factory is None:
         session_factory = make_session_factory(make_engine(settings))
     app.state.session_factory = session_factory
+    # Live voice stays off (None) unless explicitly enabled and both provider keys are configured.
+    app.state.voice_stack = voice_stack if voice_stack is not None else build_voice_stack(settings, session_factory)
 
     allowed = set(settings.cors_origins)
 
@@ -54,6 +58,7 @@ def create_app(settings: Settings | None = None, session_factory: async_sessionm
     app.include_router(knowledge.router, prefix="/api/v1")
     app.include_router(team.router, prefix="/api/v1")
     app.include_router(team.public, prefix="/api/v1")
+    app.include_router(voice.router, prefix="/api/v1")
 
     @app.get("/health")
     async def health():

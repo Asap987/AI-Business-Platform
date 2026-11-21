@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     elevenlabs_stt_final_merge_wait_seconds: float = Field(default=0.3, ge=0.0)
 
     # ---- Voice sessions ---------------------------------------------------
+    # Live voice is OFF until an administrator opts in: it calls paid providers.
+    voice_live_enabled: bool = False
+    voice_disabled_providers: list[str] = Field(default_factory=list)  # e.g. ["openai"] switches a provider off at startup
+    elevenlabs_default_voice_id: str | None = None  # used when an agent's config has no "voice_id"
     voice_default_language: str = "en"
     voice_session_max_seconds: int = 900
     voice_silence_timeout_seconds: int = 30

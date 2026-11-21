@@ -38,10 +38,8 @@ class Principal:
         return self.business.id
 
 
-async def current_principal(
-    request: Request, db: AsyncSession = Depends(get_db), settings: Settings = Depends(get_settings_dep)
-) -> Principal:
-    token = request.cookies.get(settings.session_cookie_name)
+async def principal_from_token(db: AsyncSession, token: str | None, settings: Settings, requested_business: str | None = None) -> Principal:
+    """Shared by HTTP requests and WebSockets: resolves a session cookie value to a user, role and business."""
     if not token:
         raise HTTPException(401, "Not authenticated")
     row = (await db.execute(select(AuthSession).where(AuthSession.token_hash == token_digest(token)))).scalar_one_or_none()
@@ -55,11 +53,16 @@ async def current_principal(
     if user is None or business is None or user.status != "active" or business.status != "active":
         raise HTTPException(401, "Not authenticated")
     # The session is bound to one business. A different X-Business-Id is refused, never honoured.
-    requested = request.headers.get("x-business-id")
-    if requested and requested.lower() != str(business.id):
+    if requested_business and requested_business.lower() != str(business.id):
         raise HTTPException(403, "You do not have access to that business")
     role = await db.get(Role, user.role_id)
     return Principal(user=user, role=role, business=business, session=row)
+
+
+async def current_principal(
+    request: Request, db: AsyncSession = Depends(get_db), settings: Settings = Depends(get_settings_dep)
+) -> Principal:
+    return await principal_from_token(db, request.cookies.get(settings.session_cookie_name), settings, request.headers.get("x-business-id"))
 
 
 def has_permission(role: Role, needed: str) -> bool:

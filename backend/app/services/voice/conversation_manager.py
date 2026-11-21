@@ -152,6 +152,13 @@ class ConversationManager:
         turn.outcome.interrupted = True
         return True
 
+    async def hand_over(self, session: VoiceSession, reason: str) -> TurnOutcome:
+        """Flag the call for a person (used when something outside a turn, such as speech recognition, fails)."""
+        outcome = TurnOutcome()
+        await self._escalate(session, reason, outcome)
+        session.state = SessionState.ESCALATING
+        return outcome
+
     # ---- the turn ---------------------------------------------------------
     async def _run(self, turn, text, sink, business_context, detected, probability) -> TurnOutcome:
         session = turn.session
