@@ -63,9 +63,9 @@ function CustomerPicker({ selected, onSelect, error }: { selected: Customer | nu
   );
 }
 
-export function CaseForm({ onCreated, onCancel }: { onCreated: (created: CaseItem) => void; onCancel: () => void }) {
+export function CaseForm({ onCreated, onCancel, initialCustomer }: { onCreated: (created: CaseItem) => void; onCancel: () => void; initialCustomer?: Customer }) {
   const departments = useDepartmentOptions();
-  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [customer, setCustomer] = useState<Customer | null>(initialCustomer ?? null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<CasePriority>("medium");

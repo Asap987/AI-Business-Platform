@@ -172,3 +172,9 @@ The product is **KASORA AI** (`APP_NAME` in `frontend/src/lib/config.ts`; page t
 ## Navigation by permission (2026-11-21)
 
 The sidebar, the phone drawer, the header page search and the Settings cards now hide pages the signed-in role cannot use. Each `NavItem`/`NavChild` may carry `permission` (`cases:read`, `knowledge:read`, `customers:read`, `departments:read`, `employees:read`, `voice:use`; Team `users:read` and Privacy `privacy:read` on the Settings cards); items without one are shown to everyone. `filterNavGroups` (`src/lib/nav-access.ts`, checked with `node --experimental-transform-types scripts/nav-access.check.ts`) drops empty groups and parents. This is only tidying: pages still show "Permission denied" if opened by address, and the backend enforces every endpoint. Checked in a real browser with an Administrator and an invited Employee (12 scripted checks, not in the repo).
+
+## Customer detail page (frontend only, no new endpoints)
+
+- `/customers/<id>` shows one customer (`GET /customers/{id}`) and, with `cases:read`, that customer's cases (`GET /cases?customer_id=<id>`). Another business's id, or an unknown id, shows "not found" (the API returns 404).
+- "Edit customer" appears only with `customers:write`. "New case" on this page pre-selects the customer.
+- Customer names in the Customers list link to this page.

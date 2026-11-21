@@ -23,11 +23,12 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePermission } from "@/hooks/usePermission";
 import { formatRelativeTime } from "@/lib/utils";
 import type { Paginated } from "@/types/api";
-import type { CaseItem } from "@/types/org";
+import type { CaseItem, Customer } from "@/types/org";
 
 const PAGE_SIZE = 20;
 
-export function CasesView() {
+/** Pass `customer` to show only that customer's cases inside their page (no page header, no customer column). */
+export function CasesView({ customer }: { customer?: Customer } = {}) {
   const router = useRouter();
   const canWrite = usePermission("cases:write");
   const [page, setPage] = useState(1);
@@ -41,6 +42,7 @@ export function CasesView() {
   const employees = useEmployeeOptions();
   const resource = useApiResource<Paginated<CaseItem>>("/cases", {
     page, page_size: PAGE_SIZE, status: status || undefined, priority: priority || undefined, q: q || undefined,
+    customer_id: customer?.id,
   });
 
   // Any filter change goes back to the first page.
@@ -49,21 +51,23 @@ export function CasesView() {
     setPage(1);
   };
   const filtered = Boolean(status || priority || q);
+  const newCaseButton = canWrite ? (
+    <Button onClick={() => setCreating(true)}>
+      <Plus aria-hidden="true" className="size-4" />
+      New case
+    </Button>
+  ) : null;
 
   return (
     <>
-      <PageHeader
-        title="Cases & Escalations"
-        description="Customer problems that need resolution, and who is working on them."
-        actions={
-          canWrite ? (
-            <Button onClick={() => setCreating(true)}>
-              <Plus aria-hidden="true" className="size-4" />
-              New case
-            </Button>
-          ) : null
-        }
-      />
+      {customer ? (
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-ink">Cases</h2>
+          {newCaseButton}
+        </div>
+      ) : (
+        <PageHeader title="Cases & Escalations" description="Customer problems that need resolution, and who is working on them." actions={newCaseButton} />
+      )}
 
       <Card>
         <div className="grid gap-3 border-b border-border p-4 sm:grid-cols-[1fr_12rem_10rem]">
@@ -112,7 +116,7 @@ export function CasesView() {
                 <TableHead>
                   <tr>
                     <TableHeader>Case</TableHeader>
-                    <TableHeader>Customer</TableHeader>
+                    {customer ? null : <TableHeader>Customer</TableHeader>}
                     <TableHeader>Priority</TableHeader>
                     <TableHeader>Status</TableHeader>
                     <TableHeader>Department</TableHeader>
@@ -128,7 +132,7 @@ export function CasesView() {
                           {c.title}
                         </Link>
                       </TableCell>
-                      <TableCell>{c.customer_name ?? "—"}</TableCell>
+                      {customer ? null : <TableCell>{c.customer_name ?? "—"}</TableCell>}
                       <TableCell>
                         <PriorityBadge priority={c.priority} />
                       </TableCell>
@@ -155,6 +159,7 @@ export function CasesView() {
       <Modal open={creating} onClose={() => setCreating(false)} title="New case" description="Log a customer problem so the right team can resolve it." size="lg">
         {creating ? (
           <CaseForm
+            initialCustomer={customer}
             onCancel={() => setCreating(false)}
             onCreated={(created) => {
               setCreating(false);
