@@ -93,6 +93,8 @@ export interface CreatedInvite {
   email: string;
   token: string;
   expires_at: string;
+  /** True when the invitation email was sent; false means the administrator must share the link by hand. */
+  email_sent: boolean;
 }
 
 export interface KnowledgeDoc {

@@ -174,6 +174,16 @@ class UserInvite(Base):
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
 
+class PasswordReset(Base):
+    __tablename__ = "password_resets"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = _fk("users")
+    token_hash: Mapped[str] = mapped_column(Text, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
 class KnowledgeDocument(Base):
     __tablename__ = "knowledge_documents"
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)

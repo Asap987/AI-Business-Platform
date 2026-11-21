@@ -90,7 +90,7 @@ class InviteIn(BaseModel):
 
 
 @router.post("/users/invites", status_code=201)
-async def create_invite(body: InviteIn, p: Principal = Depends(require("users:write")), db: AsyncSession = Depends(get_db)):
+async def create_invite(body: InviteIn, request: Request, p: Principal = Depends(require("users:write")), db: AsyncSession = Depends(get_db)):
     await _role(db, p.business_id, body.role_id)
     if body.employee_id is not None:
         emp = (await db.execute(select(Employee).where(Employee.id == body.employee_id, Employee.business_id == p.business_id))).scalar_one_or_none()
@@ -115,8 +115,11 @@ async def create_invite(body: InviteIn, p: Principal = Depends(require("users:wr
     await db.flush()
     audit.record(db, p.business_id, p.user.id, "invite.created", invite_id=inv.id, email=body.email, role_id=body.role_id)
     await db.commit()
-    # The token is returned this once and never again; only its hash is stored.
-    return {"id": str(inv.id), "email": inv.email, "token": token, "expires_at": inv.expires_at.isoformat()}
+    role = await db.get(Role, body.role_id)
+    sent = await request.app.state.email.send_invite(inv.email, p.business.name, role.name if role else "team member", token, INVITE_DAYS)
+    # The token is returned this once and never again; only its hash is stored. `email_sent` says whether the
+    # invitation email went out; when it is false the administrator copies the link by hand.
+    return {"id": str(inv.id), "email": inv.email, "token": token, "expires_at": inv.expires_at.isoformat(), "email_sent": sent}
 
 
 @router.delete("/users/invites/{invite_id}", status_code=204)

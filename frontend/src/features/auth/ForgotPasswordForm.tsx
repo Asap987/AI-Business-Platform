@@ -31,9 +31,7 @@ export function ForgotPasswordForm() {
       await forgotPasswordRequest({ email: email.trim() });
       setSentTo(email.trim());
     } catch (err) {
-      if (err instanceof ApiError && err.kind === "not_found") {
-        setFormError("Password reset isn't available yet because the backend recovery endpoint hasn't been built.");
-      } else if (err instanceof ApiError && err.kind === "validation") {
+      if (err instanceof ApiError && err.kind === "validation") {
         setEmailError(err.fieldErrors.email);
         if (!err.fieldErrors.email) setFormError(err.message);
       } else if (err instanceof ApiError) {

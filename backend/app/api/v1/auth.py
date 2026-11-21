@@ -3,15 +3,16 @@ from __future__ import annotations
 import re
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import Principal, current_principal, get_db, get_settings_dep
 from app.core.config import Settings
 from app.core.security import hash_password, new_session_token, token_digest, verify_password
-from app.database.models import AuthSession, Business, Role, User
+from app.database.models import AuthSession, Business, PasswordReset, Role, User
+from app.services import audit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -38,6 +39,11 @@ class RegisterBody(BaseModel):
 
 class ForgotBody(BaseModel):
     email: str = Field(max_length=254, pattern=EMAIL_PATTERN)
+
+
+class ResetBody(BaseModel):
+    token: str = Field(min_length=20, max_length=200)
+    password: str = Field(min_length=10, max_length=256)
 
 
 def _session_response(p: Principal) -> dict:
@@ -139,8 +145,38 @@ async def me(principal: Principal = Depends(current_principal)):
 
 
 @router.post("/forgot-password", status_code=204)
-async def forgot_password(body: ForgotBody, request: Request):
-    # No token table or email provider exists yet, so nothing is sent. The answer is the same
-    # whether or not the account exists, so this endpoint cannot be used to find accounts.
+async def forgot_password(body: ForgotBody, request: Request, tasks: BackgroundTasks, db: AsyncSession = Depends(get_db),
+                          settings: Settings = Depends(get_settings_dep)):
+    """Always answers 204, whether or not the account exists, and the email goes out after the answer, so neither
+    the response nor its timing can be used to find accounts."""
     _limit(request, "forgot", body.email.lower())
-    return Response(status_code=204)
+    user = (await db.execute(select(User).where(User.email == body.email.lower()))).scalar_one_or_none()
+    business = await db.get(Business, user.business_id) if user else None
+    if user and user.status == "active" and business and business.status == "active":
+        await db.execute(delete(PasswordReset).where(PasswordReset.user_id == user.id, PasswordReset.used_at.is_(None)))
+        token = new_session_token()
+        db.add(PasswordReset(user_id=user.id, token_hash=token_digest(token),
+                             expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.password_reset_minutes)))
+        audit.record(db, user.business_id, user.id, "password.reset_requested")
+        await db.commit()
+        tasks.add_task(request.app.state.email.send_password_reset, user.email, token, settings.password_reset_minutes)
+    return Response(status_code=204, background=tasks)
+
+
+@router.post("/reset-password", status_code=204)
+async def reset_password(body: ResetBody, request: Request, tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    _limit(request, "reset")
+    row = (await db.execute(select(PasswordReset).where(PasswordReset.token_hash == token_digest(body.token)))).scalar_one_or_none()
+    now = datetime.now(timezone.utc)
+    expires = row.expires_at.replace(tzinfo=timezone.utc) if row and row.expires_at.tzinfo is None else (row.expires_at if row else None)
+    user = await db.get(User, row.user_id) if row else None
+    if not (row and row.used_at is None and expires > now and user and user.status == "active"):
+        raise HTTPException(404, "This reset link is invalid or has expired. Please request a new one.")
+    user.password_hash = hash_password(body.password)
+    row.used_at = now
+    await db.execute(delete(AuthSession).where(AuthSession.user_id == user.id))  # sign out everywhere
+    await db.execute(update(PasswordReset).where(PasswordReset.user_id == user.id, PasswordReset.used_at.is_(None)).values(used_at=now))
+    audit.record(db, user.business_id, user.id, "password.reset_completed")
+    await db.commit()
+    tasks.add_task(request.app.state.email.send_password_changed_notice, user.email)
+    return Response(status_code=204, background=tasks)

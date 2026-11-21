@@ -178,3 +178,16 @@ The sidebar, the phone drawer, the header page search and the Settings cards now
 - `/customers/<id>` shows one customer (`GET /customers/{id}`) and, with `cases:read`, that customer's cases (`GET /cases?customer_id=<id>`). Another business's id, or an unknown id, shows "not found" (the API returns 404).
 - "Edit customer" appears only with `customers:write`. "New case" on this page pre-selects the customer.
 - Customer names in the Customers list link to this page.
+
+## Email, password reset and invitation email (added 2026-11-21)
+
+- `POST /auth/forgot-password {email}` always returns 204 (the same for unknown, disabled or unverified accounts); the email is sent after the response. Link: `{APP_BASE_URL}/reset-password#token=...` (single use, 60 minutes by default).
+- `POST /auth/reset-password {token, password}` (password at least 10 characters) returns 204. An unknown, used, replaced or expired token returns 404. Success signs the user out everywhere and sends a security notice. Rate limited.
+- `POST /users/invites` now also returns `email_sent: boolean`. When false the administrator shares the returned link by hand.
+- Email is off unless `EMAIL_PROVIDER=resend`, `RESEND_API_KEY` and `EMAIL_FROM` are set. See `live-testing-and-email-setup.md`.
+- Frontend page: `/reset-password` (token read from the fragment, then removed from the address bar).
+
+## Profile and business name (backend added 2026-11-21; screens not built yet)
+
+- `PATCH /profile {full_name}`: any signed-in user, own name only (2 to 120 characters, unknown fields rejected with 422). Returns the same body as `GET /auth/me`.
+- `PATCH /business {name}`: needs `business:write` (Administrator). Writes an audit event `business.updated` with `changed: ["name"]`. Returns the same body as `GET /auth/me`.

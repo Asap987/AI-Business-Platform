@@ -68,12 +68,19 @@ function InviteForm({ roles, onDone, onCancel }: { roles: TeamRole[]; onDone: ()
     return (
       <div className="space-y-4">
         <p className="text-sm text-ink">
-          Send this link to <strong>{created.email}</strong>. It works once and expires in 7 days.
+          {created.email_sent ? (
+            <>
+              We emailed an invitation to <strong>{created.email}</strong>. It works once and expires in 7 days. You can also share this link yourself.
+            </>
+          ) : (
+            <>
+              The invitation email was not sent, so send this link to <strong>{created.email}</strong> yourself. It works once and expires in 7 days.
+            </>
+          )}
         </p>
         <Input label="Invitation link" name="invite_link" value={link} readOnly onFocus={(e) => e.currentTarget.select()} />
         <p className="text-sm text-muted">
           For security this link is shown only now and can&apos;t be retrieved later. If it&apos;s lost, withdraw the invitation and create a new one.
-          Email isn&apos;t sent automatically yet.
         </p>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="secondary" onClick={() => void copy()}>

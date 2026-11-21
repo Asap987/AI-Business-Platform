@@ -20,6 +20,7 @@ export const AUTH_ENDPOINTS = {
   forgotPassword: "/auth/forgot-password",
   inviteInfo: "/auth/invite-info",
   acceptInvite: "/auth/accept-invite",
+  resetPassword: "/auth/reset-password",
 } as const;
 
 export function loginRequest(payload: LoginPayload): Promise<SessionResponse> {
@@ -66,4 +67,8 @@ export function inviteInfoRequest(token: string): Promise<InviteInfo> {
 
 export function acceptInviteRequest(payload: { token: string; password: string; full_name?: string }): Promise<SessionResponse> {
   return api.post<SessionResponse>(AUTH_ENDPOINTS.acceptInvite, payload, { skipUnauthorizedHandler: true });
+}
+
+export function resetPasswordRequest(payload: { token: string; password: string }): Promise<void> {
+  return api.post<void>(AUTH_ENDPOINTS.resetPassword, payload, { skipUnauthorizedHandler: true });
 }

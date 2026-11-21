@@ -12,13 +12,14 @@ from app.api.v1 import settings as settings_api
 from app.core.config import Settings, get_settings
 from app.core.security import RateLimiter
 from app.database.connection import make_engine, make_session_factory
+from app.services.email import EmailService, build_email_service
 from app.services.voice.stack import VoiceStack, build_voice_stack
 
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 
 
 def create_app(settings: Settings | None = None, session_factory: async_sessionmaker[AsyncSession] | None = None,
-               voice_stack: VoiceStack | None = None) -> FastAPI:
+               voice_stack: VoiceStack | None = None, email_service: EmailService | None = None) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(title="AI Business Platform API", docs_url=None if settings.environment == "production" else "/docs")
     app.state.settings = settings
@@ -26,6 +27,7 @@ def create_app(settings: Settings | None = None, session_factory: async_sessionm
     if session_factory is None:
         session_factory = make_session_factory(make_engine(settings))
     app.state.session_factory = session_factory
+    app.state.email = email_service if email_service is not None else build_email_service(settings)
     # Live voice stays off (None) unless explicitly enabled and both provider keys are configured.
     app.state.voice_stack = voice_stack if voice_stack is not None else build_voice_stack(settings, session_factory)
 
