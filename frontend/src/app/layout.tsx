@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
-  description: "AI-powered business communication and problem resolution platform.",
+  description: "KASORA AI: AI-powered business communication and problem resolution platform.",
 };
 
 export const viewport: Viewport = {

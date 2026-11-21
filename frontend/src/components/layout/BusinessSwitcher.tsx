@@ -1,10 +1,11 @@
 "use client";
 
-import { Building, Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ApiError } from "@/lib/api";
+import { KasoraMark } from "@/components/brand/KasoraMark";
 import { APP_NAME } from "@/lib/config";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
@@ -20,9 +21,9 @@ export function BusinessSwitcher({ collapsed }: { collapsed: boolean }) {
   const mark = (
     <span
       aria-hidden="true"
-      className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-on-primary"
+      className="flex size-9 shrink-0 items-center justify-center text-sidebar-text-strong"
     >
-      <Building className="size-5" />
+      <KasoraMark className="size-8" />
     </span>
   );
 

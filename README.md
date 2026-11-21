@@ -1,4 +1,6 @@
-# AI Business Platform
+# KASORA AI
+
+_Repository: AI-Business-Platform. KASORA AI is the product name; the logo mark is `frontend/src/components/brand/KasoraMark.tsx` and the app icons are `frontend/src/app/icon.svg`, `apple-icon.png` and `frontend/public/icon-*.png`._
 
 ## Running the backend
 

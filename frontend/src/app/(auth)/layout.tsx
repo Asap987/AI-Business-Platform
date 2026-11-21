@@ -1,5 +1,5 @@
-import { Building } from "lucide-react";
 import type { ReactNode } from "react";
+import { KasoraMark } from "@/components/brand/KasoraMark";
 import { GuestGuard } from "@/components/layout/AuthGuard";
 import { APP_NAME } from "@/lib/config";
 
@@ -9,9 +9,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="grid min-h-dvh lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
         <aside className="hidden flex-col justify-between bg-sidebar p-12 text-sidebar-text lg:flex">
           <div className="flex items-center gap-3">
-            <span aria-hidden="true" className="flex size-10 items-center justify-center rounded-lg bg-accent text-on-primary">
-              <Building className="size-5" />
-            </span>
+            <KasoraMark animated className="size-12 text-sidebar-text-strong" />
             <span className="text-lg font-semibold text-sidebar-text-strong">{APP_NAME}</span>
           </div>
           <div>
@@ -29,9 +27,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <main className="flex items-center justify-center bg-surface px-4 py-10 sm:px-8">
           <div className="w-full max-w-md">
             <div className="mb-8 flex items-center gap-3 lg:hidden">
-              <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-lg bg-accent text-on-primary">
-                <Building className="size-5" />
-              </span>
+              <KasoraMark animated className="size-10 text-ink" />
               <span className="text-base font-semibold text-ink">{APP_NAME}</span>
             </div>
             {children}

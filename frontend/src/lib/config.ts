@@ -14,4 +14,4 @@ export const API_PREFIX = rawPrefix === "" ? "" : `/${rawPrefix.replace(/^\/+|\/
 export const API_TIMEOUT_MS =
   Number.isFinite(rawTimeout) && rawTimeout > 0 ? rawTimeout : 15000;
 
-export const APP_NAME = "Control Center";
+export const APP_NAME = "KASORA AI";
