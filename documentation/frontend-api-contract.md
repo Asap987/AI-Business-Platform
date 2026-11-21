@@ -113,3 +113,19 @@ Rules: roles and employees must belong to the inviter's business (422); inviting
 Frontend: `/settings/team` (people, role selector, enable/disable, pending invitations, invite dialog that shows the link once) and public `/accept-invite`. The link carries the token in the URL fragment (`#token=...`), which browsers never send to servers, and the page removes it from the address bar after reading it. Checked in a real browser against PostgreSQL 16 (20 scripted checks, not in the repo) and by 9 backend tests (mutation-checked: removing the tenant filter, the self guard, the last-admin guard or session revocation each makes a test fail).
 
 Not done: sending the invitation by email, password reset, creating custom roles or editing role permissions, an audit log of staff changes, a customer-facing "your sessions" screen. Anyone who holds the link can accept it until it expires or is withdrawn, so send it over a channel you trust.
+
+## Knowledge base (added 2026-11-21)
+
+Migration `0005_knowledge_base.sql` (apply after 0004). Approved text the voice assistant may quote: opening hours, policies, procedures.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| POST / GET | `/knowledge` | `knowledge:write` / `:read` | `title`, optional `category`, `content` (3–50,000 chars), `status` (`published` default, or `archived`). List filters `q` (title, category), `status`; list omits `content` |
+| GET / PATCH / DELETE | `/knowledge/{id}` | read / write | editing `content` re-splits it into chunks; DELETE removes the document and its chunks |
+| GET | `/knowledge/search?q=` | `knowledge:read` | shows what the assistant would find for a question (top 3 passages), so staff can check their documents |
+
+How the assistant uses it: `DatabaseBusinessGateway` now offers `search_knowledge`. It searches only the caller's business and only **published** documents, and returns at most three passages of up to 900 characters each, so only the relevant text reaches the AI provider. When nothing matches, the tool result tells the model not to guess and to offer a team member. Search is keyword-based (documents are split into ~700-character chunks; terms are matched case-insensitively and scored by how many appear, how often, and in the title). There are no embeddings: that needs an embeddings provider, which has not been approved, and keyword search keeps document text on our own database.
+
+Data protection: documents are business-written, tenant-scoped rows; other businesses' documents are never returned (404 / empty). The editor warns against storing passwords or card numbers; redaction in `redact_for_provider` is a safety net only. Text in a document is treated by the model as data to quote, not instructions, but a malicious or careless document can still steer answers, so only trusted staff should have `knowledge:write` (Manager has it by default; Employee has read). New businesses get these defaults; **existing businesses' roles are unchanged**, so add `knowledge:read`/`write` to their roles if needed. Frontend: `/knowledge` (list, search, status filter, add/edit with `.txt`/`.md` import read in the browser, delete, and a "Test a question" panel). Checked in a real browser (11 scripted checks, not in the repo) and by 6 backend tests mutation-checked for the tenant filters and the published-only rule; all API tests also pass on PostgreSQL 16.
+
+Not done: PDF/Word import (paste the text instead), semantic search, per-document versions or approval workflow, language detection per document (Twi, Ewe and Ga remain unsupported by the voice layer), sorting by relevance across more than 300 candidate chunks, and the voice pipeline is still not wired to the API, so the assistant cannot yet use this over a live call.

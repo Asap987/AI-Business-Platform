@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { ModulePlaceholder } from "@/components/layout/ModulePlaceholder";
+import { KnowledgeView } from "@/features/knowledge/KnowledgeView";
 
 export const metadata: Metadata = { title: "Knowledge Base" };
 
 export default function KnowledgePage() {
-  return <ModulePlaceholder module="knowledge" />;
+  return <KnowledgeView />;
 }

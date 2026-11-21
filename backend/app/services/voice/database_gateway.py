@@ -1,9 +1,10 @@
 """
 Database-backed business gateway for the voice assistant.
 
-Offers only what the real backend can do today: log a case and flag a hand-over.
-There is no knowledge-base storage yet, so ``search_knowledge`` is NOT offered
-(the in-memory gateway still has it for the prototype). All writes go through
+Offers what the real backend can do: look up the business's published knowledge-base
+documents, log a case and flag a hand-over. Knowledge search is read-only, scoped to the
+business, and returns at most three short passages, so only what is relevant to the question
+reaches the AI provider. All writes go through
 app.services.cases, the same rules the HTTP API uses, scoped to the business,
 and are recorded in the case history as made by the AI.
 
@@ -23,13 +24,15 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.database.models import Department
+from app.services import knowledge
 from app.services.cases import Actor, RuleError, create_case
-from app.services.voice.business_gateway import CreateCaseArgs, EscalateArgs
+from app.services.voice.business_gateway import CreateCaseArgs, EscalateArgs, SearchArgs
 from app.services.voice.interfaces.business_tools import BusinessToolGateway, ToolDefinition, ToolResult
 
 CustomerResolver = Callable[[UUID, UUID], Awaitable[UUID | None]]  # (business_id, session_id) -> customer_id
 
 _TOOLS = {
+    "search_knowledge": (SearchArgs, "Look up approved business information (hours, policies, procedures). Answer only from what it returns."),
     "create_case": (CreateCaseArgs, "Log the caller's problem as a case for the team. Only works once the caller is identified."),
     "escalate_to_human": (EscalateArgs, "Hand the call over to a person."),
 }
@@ -51,6 +54,15 @@ class DatabaseBusinessGateway(BusinessToolGateway):
             args = _TOOLS[tool_name][0].model_validate(arguments)
         except ValidationError:
             return ToolResult(ok=False, summary="The request details were incomplete or invalid. Nothing was done.")
+        if isinstance(args, SearchArgs):
+            async with self._factory() as db:
+                hits = await knowledge.search(db, business_id, args.query)
+            if not hits:
+                return ToolResult(ok=True, summary="No matching information was found. Do not guess; offer to connect a team member.",
+                                  data={"results": []})
+            passages = [f"[{h.title}] {h.text}"[:900] for h in hits]
+            return ToolResult(ok=True, summary="\n\n".join(passages), data={"results": [h.title for h in hits]})
+
         customer_id = await self._resolve_customer(business_id, session_id)
         actor = Actor("ai")
 

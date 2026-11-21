@@ -78,8 +78,8 @@ async def test_escalation_creates_an_urgent_case_when_the_caller_is_known(env):
 async def test_only_offered_tools_run_and_bad_arguments_do_nothing(env):
     factory, a_id, *_ , ca, cb = await setup(env)
     gw = gateway(factory, ca)
-    assert {t.name for t in await gw.list_tools(a_id, None)} == {"create_case", "escalate_to_human"}
-    assert (await run(gw, a_id, "search_knowledge", {"query": "hours"})).summary == "That action is not available."
+    assert {t.name for t in await gw.list_tools(a_id, None)} == {"search_knowledge", "create_case", "escalate_to_human"}
+    assert (await run(gw, a_id, "drop_tables", {})).summary == "That action is not available."
     assert (await run(gw, a_id, "run_sql", {"q": "x"})).ok is False
     assert not (await run(gw, a_id, "create_case", {"title": ""})).ok
     async with factory() as db:

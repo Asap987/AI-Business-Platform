@@ -94,3 +94,24 @@ export interface CreatedInvite {
   token: string;
   expires_at: string;
 }
+
+export interface KnowledgeDoc {
+  id: string;
+  title: string;
+  category: string | null;
+  status: "published" | "archived";
+  characters: number;
+  created_at: string;
+  updated_at: string;
+  /** Only on single-document responses. */
+  content?: string;
+  chunks?: number;
+}
+
+export interface KnowledgeHit {
+  document_id: string;
+  title: string;
+  category: string | null;
+  text: string;
+  score: number;
+}
