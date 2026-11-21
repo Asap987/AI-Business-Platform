@@ -82,9 +82,9 @@ Not done: a human-readable case reference number (cases are identified by UUID),
 | POST / GET | `/employees` | `full_name`, optional `email`, `phone`, `job_title`, `department_id`, `status` (`active`, `on_leave`, `inactive`); list filters `q`, `department_id`, `status` |
 | GET / PATCH | `/employees/{id}` | `null` clears email/phone/title/department. Employees are deactivated, never deleted, because cases refer to them |
 
-Rules: a department must belong to the same business (422 otherwise); setting an employee `inactive` is refused (409) while they have open cases (reassign first), `on_leave` is allowed, and only `active` employees can be assigned new cases. `has_login` says whether the employee is linked to a user account, but there is no endpoint to create users, link them, or invite staff yet, so an Administrator created at registration is the only login. Permissions: `departments:read|write`, `employees:read|write`. Defaults: Administrator everything; Manager writes both; Employee reads both.
+Rules: a department must belong to the same business (422 otherwise); setting an employee `inactive` is refused (409) while they have open cases (reassign first), `on_leave` is allowed, and only `active` employees can be assigned new cases. `has_login` says whether the employee is linked to a user account, and staff logins are created by invitation (see "Staff accounts" below). Permissions: `departments:read|write`, `employees:read|write`. Defaults: Administrator everything; Manager writes both; Employee reads both.
 
-Not done: user invitations and role management, department managers/heads, employee working hours or availability (needed for call routing), bulk import.
+Not done: department managers/heads, employee working hours or availability (needed for call routing), bulk import.
 
 ## Frontend screens (2026-11-20)
 
@@ -94,3 +94,22 @@ Built and checked in a real browser against the real API on PostgreSQL 16 (25 sc
 - Pickers (department, assignee) load up to 100 departments/employees; a business with more than 100 would need search-as-you-type pickers.
 - Not built: customer detail page, a customer's case list, editing a case's title or description, creating employee logins, bulk actions, notifications, per-column sorting. The history shows "Team member" rather than a name because the API returns only the user id.
 - The case-status choices offered in the UI mirror the backend's rules; if they ever disagree the backend wins and the UI shows its 409 message.
+
+## Staff accounts (added 2026-11-21)
+
+Migration `0004_user_invites.sql` (apply after 0003). There is no email provider, so an invitation is a one-time link that the administrator copies and sends themselves.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/users`, `/roles`, `/users/invites` | `users:read` | pending invitations only; the token is never listed |
+| POST | `/users/invites` | `users:write` | `{email, role_id, employee_id?}` returns `{id, email, token, expires_at}`. **The token is returned once**; only its SHA-256 is stored. Valid 7 days |
+| DELETE | `/users/invites/{id}` | `users:write` | withdraw; the link stops working |
+| PATCH | `/users/{id}` | `users:write` | `role_id` and/or `status` (`active` / `disabled`) |
+| POST | `/auth/invite-info` | public, rate-limited | `{token}` returns email, business name, role name; 404 for any bad token |
+| POST | `/auth/accept-invite` | public, rate-limited | `{token, password (min 10), full_name?}` creates the user, links the employee if the invitation named one, starts a session |
+
+Rules: roles and employees must belong to the inviter's business (422); inviting an email that already has an account anywhere or a pending invitation here gives one identical 409, so another business's accounts are not revealed; an expired invitation can be replaced; tokens are single use. You cannot change your own role or disable yourself; the last active administrator (a role holding `*`) cannot be demoted or disabled; disabling deletes the user's sessions, so they are signed out on their next request; role changes apply on the next request. `users:*` is held only by Administrator by default.
+
+Frontend: `/settings/team` (people, role selector, enable/disable, pending invitations, invite dialog that shows the link once) and public `/accept-invite`. The link carries the token in the URL fragment (`#token=...`), which browsers never send to servers, and the page removes it from the address bar after reading it. Checked in a real browser against PostgreSQL 16 (20 scripted checks, not in the repo) and by 9 backend tests (mutation-checked: removing the tenant filter, the self guard, the last-admin guard or session revocation each makes a test fail).
+
+Not done: sending the invitation by email, password reset, creating custom roles or editing role permissions, an audit log of staff changes, a customer-facing "your sessions" screen. Anyone who holds the link can accept it until it expires or is withdrawn, so send it over a channel you trust.

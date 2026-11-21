@@ -60,3 +60,37 @@ export interface Employee {
   has_login: boolean;
   created_at: string;
 }
+
+export interface TeamRole {
+  id: string;
+  name: string;
+  description: string | null;
+  permissions: string[];
+}
+
+export interface TeamUser {
+  id: string;
+  email: string;
+  full_name: string;
+  status: "active" | "invited" | "disabled";
+  role: { id: string; name: string };
+  last_login_at: string | null;
+  created_at: string;
+  has_employee_profile: boolean;
+}
+
+export interface TeamInvite {
+  id: string;
+  email: string;
+  role: { id: string; name: string };
+  created_at: string;
+  expires_at: string;
+  expired: boolean;
+}
+
+export interface CreatedInvite {
+  id: string;
+  email: string;
+  token: string;
+  expires_at: string;
+}

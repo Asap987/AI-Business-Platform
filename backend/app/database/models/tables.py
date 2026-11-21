@@ -158,3 +158,17 @@ class CaseEvent(Base):
     kind: Mapped[str] = mapped_column(String)
     detail: Mapped[Any] = mapped_column(Json, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class UserInvite(Base):
+    __tablename__ = "user_invites"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    business_id: Mapped[UUID] = _fk("businesses")
+    email: Mapped[str] = mapped_column(Text)  # stored lower-cased
+    role_id: Mapped[UUID] = _fk("roles")
+    employee_id: Mapped[UUID | None] = _fk("employees", True)
+    token_hash: Mapped[str] = mapped_column(Text, unique=True)
+    invited_by: Mapped[UUID | None] = _fk("users", True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

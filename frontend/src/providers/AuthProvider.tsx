@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { ApiError, isAbortError, setApiBusinessId, setUnauthorizedHandler } from "@/lib/api";
-import { fetchSession, loginRequest, logoutRequest, registerRequest } from "@/lib/auth";
+import { acceptInviteRequest, fetchSession, loginRequest, logoutRequest, registerRequest } from "@/lib/auth";
 import type {
   Business,
   LoginPayload,
@@ -40,6 +40,7 @@ interface AuthContextValue {
   tenantKey: string;
   login: (payload: LoginPayload) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
+  acceptInvite: (payload: { token: string; password: string; full_name?: string }) => Promise<void>;
   logout: () => Promise<void>;
   retrySession: () => void;
   switchBusiness: (businessId: string) => Promise<void>;
@@ -135,6 +136,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState(fromSession(session));
   }, []);
 
+  const acceptInvite = useCallback(async (payload: { token: string; password: string; full_name?: string }) => {
+    const session = await acceptInviteRequest(payload);
+    setApiBusinessId(null);
+    setState(fromSession(session));
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await logoutRequest();
@@ -181,11 +188,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tenantKey: state.tenantKey,
       login,
       register,
+      acceptInvite,
       logout,
       retrySession,
       switchBusiness,
     }),
-    [state, login, register, logout, retrySession, switchBusiness],
+    [state, login, register, acceptInvite, logout, retrySession, switchBusiness],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

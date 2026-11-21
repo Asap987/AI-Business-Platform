@@ -1,4 +1,4 @@
-import { Building2, User, UserCog } from "lucide-react";
+import { Building2, User, UserCog, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -9,14 +9,15 @@ export const metadata: Metadata = { title: "Settings" };
 const SECTIONS = [
   { href: "/settings/profile", title: "My Profile", description: "Your name and contact details.", icon: User },
   { href: "/settings/account", title: "Account Settings", description: "Password and sign-in security.", icon: UserCog },
-  { href: "/settings/business", title: "Business Settings", description: "Business details, roles and team.", icon: Building2 },
+  { href: "/settings/team", title: "Team", description: "Invite staff, change roles, disable logins.", icon: Users },
+  { href: "/settings/business", title: "Business Settings", description: "Business details and preferences.", icon: Building2 },
 ] as const;
 
 export default function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" description="Manage your profile, account and business." />
-      <ul className="grid gap-4 md:grid-cols-3">
+      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {SECTIONS.map(({ href, title, description, icon: Icon }) => (
           <li key={href}>
             <Link href={href} className="block h-full rounded-xl">
