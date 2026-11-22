@@ -5,6 +5,7 @@ import {
   ChartColumn,
   LayoutDashboard,
   Contact,
+  ClipboardList,
   LifeBuoy,
   MessageCircle,
   Mic,
@@ -92,6 +93,13 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+/** Shown only to platform administrators (the server decides; see usePlatformAccess). */
+export const PLATFORM_GROUP: NavGroup = {
+  id: "platform",
+  label: "Platform",
+  items: [{ id: "project", label: "Project progress", href: "/platform/project", icon: ClipboardList }],
+};
+
 /** URL segment -> breadcrumb label. Unknown segments fall back to a humanised form. */
 export const ROUTE_LABELS: Record<string, string> = {
   dashboard: "Overview",
@@ -114,6 +122,8 @@ export const ROUTE_LABELS: Record<string, string> = {
   account: "Account Settings",
   business: "Business Settings",
   help: "Help & Support",
+  platform: "Platform",
+  project: "Project progress",
 };
 
 export function isRouteActive(pathname: string, href: string): boolean {
