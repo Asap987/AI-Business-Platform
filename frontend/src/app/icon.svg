@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <style>
+    .bg { fill: #ffffff; } .fg { stroke: #1a2b4c; } .fgf { fill: #1a2b4c; }
+    @media (prefers-color-scheme: dark) { .bg { fill: #121212; } .fg { stroke: #ffffff; } .fgf { fill: #ffffff; } }
+  </style>
+  <rect class="bg" width="256" height="256" rx="56"/>
+  <g transform="translate(32 32) scale(0.96)">
+    <g fill="none" class="fg" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"><path d="M 85 85 L 55 55"/><path d="M 115 85 L 135 55"/><path d="M 115 100 L 145 100"/><path d="M 100 115 L 100 145"/><path d="M 85 115 L 55 145"/></g>
+    <g class="fgf"><circle cx="100" cy="100" r="28"/><rect x="30" y="30" width="35" height="35" rx="8"/><path class="fg" d="M 140 35 L 165 70 L 115 70 Z" stroke-width="4" stroke-linejoin="round"/><circle cx="155" cy="100" r="18"/><circle cx="100" cy="155" r="18"/><rect x="30" y="130" width="35" height="35" rx="8"/></g>
+  </g>
+</svg>
