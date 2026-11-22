@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, BigInteger, Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import JSON, BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -279,3 +279,82 @@ class PriceRecord(Base):
     source_note: Mapped[str] = mapped_column(Text, default="")
     created_by: Mapped[UUID | None] = mapped_column(Uuid, default=None)  # platform admin user id (no foreign key: survives account deletion)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+# ---- Internal project tracker (platform-level, NOT tenant data: no business_id, only listed platform admins can reach it) ----
+
+class ProjectTask(Base):
+    __tablename__ = "project_tasks"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    key: Mapped[str | None] = mapped_column(String, unique=True, default=None)  # stable id used by the seed script
+    module: Mapped[str] = mapped_column(String)
+    title: Mapped[str] = mapped_column(Text)
+    description: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String, default="not_started")
+    priority: Mapped[str] = mapped_column(String, default="medium")
+    weight: Mapped[int] = mapped_column(Integer, default=1)
+    start_date: Mapped[Any] = mapped_column(Date, default=None, nullable=True)
+    deadline: Mapped[Any] = mapped_column(Date, default=None, nullable=True)
+    blocker: Mapped[str] = mapped_column(Text, default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    depends_on: Mapped[Any] = mapped_column(Json, default=list)
+    evidence_kind: Mapped[str | None] = mapped_column(String, default=None)
+    evidence: Mapped[str] = mapped_column(Text, default="")
+    is_launch: Mapped[bool] = mapped_column(Boolean, default=False)
+    launch_area: Mapped[str | None] = mapped_column(String, default=None)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+    updated_by: Mapped[UUID | None] = mapped_column(Uuid, default=None)
+
+
+class ProjectMilestone(Base):
+    __tablename__ = "project_milestones"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    name: Mapped[str] = mapped_column(Text)
+    phase: Mapped[str] = mapped_column(String, default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    start_date: Mapped[Any] = mapped_column(Date, default=None, nullable=True)
+    target_date: Mapped[Any] = mapped_column(Date)
+    reached_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class ProjectExternal(Base):
+    __tablename__ = "project_external"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    name: Mapped[str] = mapped_column(Text)
+    category: Mapped[str] = mapped_column(String)  # awaiting_us | awaiting_provider | awaiting_approval | completed
+    owner: Mapped[str] = mapped_column(Text, default="")
+    detail: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class ProjectFinance(Base):
+    __tablename__ = "project_finance"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    label: Mapped[str] = mapped_column(Text)
+    category: Mapped[str] = mapped_column(String)  # api | telephony | email | hosting | other
+    kind: Mapped[str] = mapped_column(String)  # estimate | actual | commitment
+    amount_micro_usd: Mapped[int] = mapped_column(BigInteger, default=0)
+    period: Mapped[str] = mapped_column(String, default="")  # free text such as "2026-11" or "per month"
+    state: Mapped[str] = mapped_column(String, default="")  # commitments: outstanding | settled
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class ProjectTestRun(Base):
+    __tablename__ = "project_test_runs"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    ran_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    source: Mapped[str] = mapped_column(String, default="pytest")
+    commit: Mapped[str] = mapped_column(String, default="")
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    passed: Mapped[int] = mapped_column(Integer, default=0)
+    failed: Mapped[int] = mapped_column(Integer, default=0)
+    skipped: Mapped[int] = mapped_column(Integer, default=0)
+    duration_s: Mapped[float] = mapped_column(Float, default=0)
+    coverage_pct: Mapped[float | None] = mapped_column(Float, default=None)
+    checks: Mapped[Any] = mapped_column(Json, default=dict)  # {"tsc": true, "lint": true, "build": false}; absent = not run
+    by_module: Mapped[Any] = mapped_column(Json, default=dict)
+    failures: Mapped[Any] = mapped_column(Json, default=list)  # names of failing tests, no output text
