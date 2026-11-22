@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextvars import ContextVar
 import json
 import logging
 from collections.abc import Awaitable, Callable
@@ -37,6 +38,10 @@ def parse_json(raw: str | bytes) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+# A call can install a list here; every retried connection adds one, so retries show up in its usage record.
+retry_counter: ContextVar[list[int] | None] = ContextVar("elevenlabs_retry_counter", default=None)
+
+
 async def connect_with_retries(
     connector: Connector,
     url: str,
@@ -66,6 +71,9 @@ async def connect_with_retries(
                 PROVIDER, "connect_failed", f"Could not connect ({type(exc).__name__}).", recoverable=True
             )
         if attempt < attempts - 1:
+            counter = retry_counter.get()
+            if counter is not None:
+                counter[0] += 1
             await asyncio.sleep(backoff_seconds * (2**attempt))
     assert last is not None
     raise last

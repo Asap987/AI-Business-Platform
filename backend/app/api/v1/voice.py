@@ -21,6 +21,7 @@ import contextlib
 import json
 import logging
 import time
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -35,6 +36,8 @@ from app.services.voice.call_runner import MAX_FRAME_BYTES, CallRunner
 from app.services.voice.errors import ProviderError
 from app.services.voice.schemas.transcription import STTStreamConfig
 from app.services.voice.session_store import SessionLimitError
+from app.services.usage_store import record_call
+from app.services.voice.providers.elevenlabs_common import retry_counter
 from app.services.voice.stack import missing_for_live_voice
 
 logger = logging.getLogger(__name__)
@@ -194,6 +197,9 @@ async def test_call(ws: WebSocket, agent_id: UUID | None = None):
         except WebSocketDisconnect:
             return
 
+    retries = [0]
+    retry_counter.set(retries)  # tasks created below inherit this, so speech connection retries are counted for this call
+    started_at = datetime.now(timezone.utc)
     run_task, recv_task = asyncio.create_task(runner.run()), asyncio.create_task(receive())
     try:
         await asyncio.wait({run_task, recv_task}, return_when=asyncio.FIRST_COMPLETED)
@@ -202,6 +208,8 @@ async def test_call(ws: WebSocket, agent_id: UUID | None = None):
         await runner.stop()  # idempotent: ends the session and closes the speech stream
         await asyncio.gather(run_task, recv_task, return_exceptions=True)
         usage = stack.manager.usage_for(session)
+        usage.retries = retries[0]
+        await record_call(ws.app.state.session_factory, ws.app.state.settings, usage, source="test_call", started_at=started_at, ended_at=datetime.now(timezone.utc))
         # Counts only: no transcript text, no audio.
         logger.info("voice call ended business=%s session=%s tts_chars=%s provider_errors=%s escalated=%s",
                     business_id, session.session_id, usage.tts_characters, usage.provider_errors, session.escalation.requested)

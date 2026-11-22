@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, ShieldCheck, User, UserCog, Users, type LucideIcon } from "lucide-react";
+import { Building2, ChartColumn, ShieldCheck, User, UserCog, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { can } from "@/lib/utils";
@@ -20,6 +20,7 @@ const SECTIONS: SettingsLink[] = [
   { href: "/settings/account", title: "Account Settings", description: "Password and sign-in security.", icon: UserCog },
   { href: "/settings/team", title: "Team", description: "Invite staff, change roles, disable logins.", icon: Users, permission: "users:read" },
   { href: "/settings/privacy", title: "Privacy & AI", description: "Control AI providers, masking and the activity log.", icon: ShieldCheck, permission: "privacy:read" },
+  { href: "/settings/usage", title: "Usage & costs", description: "Calls, AI usage and estimated cost.", icon: ChartColumn, permission: "usage:read" },
   { href: "/settings/business", title: "Business Settings", description: "Business details and preferences.", icon: Building2 },
 ];
 

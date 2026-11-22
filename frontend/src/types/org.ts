@@ -132,3 +132,45 @@ export interface AuditEntry {
   detail: Record<string, unknown>;
   created_at: string;
 }
+
+export interface UsageTotals {
+  calls: number;
+  stt_seconds: number;
+  tts_characters: number;
+  llm_requests: number;
+  failed_requests: number;
+  retries: number;
+  turns: number;
+  latency_avg_ms: number | null;
+  latency_max_ms: number | null;
+  /** An ESTIMATE from price records, not a provider invoice. US dollars as a decimal string. */
+  estimated_cost_usd: string;
+  cost_complete: boolean;
+  calls_missing_prices: number;
+}
+
+export interface UsageSummary {
+  cost_basis: "estimate";
+  start: string;
+  end: string;
+  total: UsageTotals;
+  by_day: Array<UsageTotals & { date: string }>;
+  by_month: Array<UsageTotals & { month: string }>;
+  by_model: Array<{ model: string; calls: number; input_tokens: number; output_tokens: number }>;
+}
+
+export interface UsageCall {
+  id: string;
+  source: string;
+  ended_at: string;
+  stt_seconds: number;
+  tts_characters: number;
+  llm_requests: number;
+  failed_requests: number;
+  retries: number;
+  turns: number;
+  latency_avg_ms: number | null;
+  estimated_cost_usd: string;
+  cost_complete: boolean;
+  missing_rates: string[];
+}

@@ -135,6 +135,9 @@ class Settings(BaseSettings):
     voice_transcript_retention_days: int = Field(default=90, ge=0)
 
     # ---- Cost tracking ----------------------------------------------------
+    # Platform administrators (people who run KASORA itself, not a customer): user ids, set by whoever deploys it.
+    # They may read cross-business usage TOTALS and manage price records; never customer content.
+    platform_admin_user_ids: list[str] = Field(default_factory=list)
     voice_pricing: PricingTable = Field(default_factory=PricingTable)
 
     # ---- Live provider tests (cost money; explicit opt-in) ----------------

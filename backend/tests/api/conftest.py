@@ -21,7 +21,7 @@ async def env():
     if url:
         engine = create_async_engine(url, poolclass=NullPool)
         async with engine.begin() as conn:
-            await conn.execute(text("TRUNCATE email_verifications, password_resets, audit_events, business_privacy, auth_sessions, user_invites, knowledge_chunks, knowledge_documents, case_events, cases, conversations, agents, employees, departments, "
+            await conn.execute(text("TRUNCATE usage_sessions, price_records, email_verifications, password_resets, audit_events, business_privacy, auth_sessions, user_invites, knowledge_chunks, knowledge_documents, case_events, cases, conversations, agents, employees, departments, "
                                     "customers, users, roles, businesses CASCADE"))
     else:
         engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})

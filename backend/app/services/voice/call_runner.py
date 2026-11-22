@@ -49,6 +49,7 @@ class CallRunner:
     async def feed_audio(self, chunk: bytes) -> None:
         if not chunk or len(chunk) > MAX_FRAME_BYTES or self._s.state is SessionState.ENDED:
             return
+        self._manager.usage_for(self._s).stt_seconds += len(chunk) / 32000  # PCM16 mono at 16 kHz
         try:
             await self._stt.send_audio(chunk)
         except ProviderError as err:

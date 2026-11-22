@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 
@@ -85,6 +86,8 @@ class _Turn:
     session: VoiceSession
     outcome: TurnOutcome = field(default_factory=TurnOutcome)
     sent_text: list[str] = field(default_factory=list)
+    started: float = field(default_factory=time.monotonic)
+    first_audio_logged: bool = False
     task: asyncio.Task | None = None
 
 
@@ -260,6 +263,9 @@ class ConversationManager:
                 if chunk.audio and session.state is not SessionState.SPEAKING:
                     session.state = SessionState.SPEAKING
                 if chunk.audio:
+                    if not turn.first_audio_logged:
+                        turn.first_audio_logged = True
+                        self.usage_for(session).response_latencies_ms.append(round((time.monotonic() - turn.started) * 1000))
                     await sink(chunk)
 
         producer = asyncio.create_task(produce())

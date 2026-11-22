@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import JSON, BigInteger, Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -236,4 +236,46 @@ class AuditEvent(Base):
     actor_user_id: Mapped[UUID | None] = _fk("users", True)
     action: Mapped[str] = mapped_column(String)
     detail: Mapped[Any] = mapped_column(Json, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class UsageSession(Base):
+    """One call's measured usage and its cost ESTIMATE. Counts are measured; the cost is always an estimate from the
+    price records in force when the call ended (the rates used are stored so the number stays explainable).
+    No transcript text, audio or customer details are stored here."""
+
+    __tablename__ = "usage_sessions"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    business_id: Mapped[UUID] = _fk("businesses")
+    session_id: Mapped[UUID] = mapped_column(Uuid)
+    conversation_id: Mapped[UUID | None] = _fk("conversations", True)
+    source: Mapped[str] = mapped_column(String, default="test_call")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    ended_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    stt_seconds: Mapped[int] = mapped_column(Integer, default=0)  # whole seconds of audio sent for recognition
+    tts_characters: Mapped[int] = mapped_column(Integer, default=0)
+    llm_requests: Mapped[int] = mapped_column(Integer, default=0)
+    llm_usage: Mapped[Any] = mapped_column(Json, default=list)  # [{"model","input_tokens","output_tokens"}] summed per model
+    failed_requests: Mapped[int] = mapped_column(Integer, default=0)
+    retries: Mapped[int] = mapped_column(Integer, default=0)  # speech-connection retries only; OpenAI SDK retries are not visible to us
+    turns: Mapped[int] = mapped_column(Integer, default=0)
+    latency_avg_ms: Mapped[int | None] = mapped_column(Integer, default=None)  # customer message to first audio, per turn
+    latency_max_ms: Mapped[int | None] = mapped_column(Integer, default=None)
+    cost_micro_usd: Mapped[int] = mapped_column(BigInteger, default=0)  # priced lines only; 1 000 000 = 1 US dollar
+    cost_complete: Mapped[bool] = mapped_column(Boolean, default=False)  # False when some used item had no price record
+    missing_rates: Mapped[Any] = mapped_column(Json, default=list)
+    pricing_snapshot: Mapped[Any] = mapped_column(Json, default=dict)
+
+
+class PriceRecord(Base):
+    """Platform-wide provider price (NOT per business). Add a new row when a provider changes a price; the row with
+    the latest ``effective_from`` on or before the day is used. ``rate`` is a decimal string, USD."""
+
+    __tablename__ = "price_records"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    item: Mapped[str] = mapped_column(String)  # elevenlabs_stt_usd_per_hour | elevenlabs_tts_usd_per_1k_chars | openai:<model>:input_usd_per_mtok | openai:<model>:output_usd_per_mtok
+    rate: Mapped[str] = mapped_column(String)
+    effective_from: Mapped[Any] = mapped_column(Date)
+    source_note: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[UUID | None] = mapped_column(Uuid, default=None)  # platform admin user id (no foreign key: survives account deletion)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

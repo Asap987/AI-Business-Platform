@@ -29,6 +29,8 @@ class UsageRecord(BaseModel):
     tts_characters: int = 0
     llm: list[ReasoningUsage] = Field(default_factory=list)
     provider_errors: int = 0
+    retries: int = 0  # speech-provider connection retries
+    response_latencies_ms: list[int] = Field(default_factory=list)  # customer message to first audio, per turn
 
     def add_llm(self, usage: ReasoningUsage) -> None:
         self.llm.append(usage)

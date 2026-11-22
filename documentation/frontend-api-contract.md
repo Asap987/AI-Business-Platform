@@ -191,3 +191,11 @@ The sidebar, the phone drawer, the header page search and the Settings cards now
 
 - `PATCH /profile {full_name}`: any signed-in user, own name only (2 to 120 characters, unknown fields rejected with 422). Returns the same body as `GET /auth/me`.
 - `PATCH /business {name}`: needs `business:write` (Administrator). Writes an audit event `business.updated` with `changed: ["name"]`. Returns the same body as `GET /auth/me`.
+
+## Usage and cost reporting (added 2026-11-22)
+
+Measured counts per call (speech seconds, speech characters, AI requests and tokens per model, failed requests, speech-connection retries, reply latency from end of customer message to first audio). **Money is always an estimate** (`cost_basis: "estimate"`), priced from platform `price_records` (newest `effective_from` on or before the call's day; falls back to the `VOICE_PRICING` setting; a missing price makes `cost_complete: false` and is listed, never invented). Prices at the time of each call are stored with it, so later price changes do not rewrite history. Nothing stored contains transcripts, audio or customer details. Only voice test calls exist today, so only they are recorded; telephony cost and OpenAI SDK retries are not measured.
+- `GET /usage/summary?start=YYYY-MM-DD&end=YYYY-MM-DD` (default last 30 days, at most 366): needs `usage:read` (Administrator by default). Returns `total`, `by_day`, `by_month`, `by_model`.
+- `GET /usage/calls?page&page_size`: the business's own calls, newest first, each with its estimated cost. This is also the cost per conversation or call.
+- Platform (people who run KASORA): the user id must be listed in `PLATFORM_ADMIN_USER_IDS`, otherwise 404. `GET /platform/usage?month=YYYY-MM` returns totals per business (no calls, no content) and is audited; `GET/POST /platform/prices` manages price records (`item` is `elevenlabs_stt_usd_per_hour`, `elevenlabs_tts_usd_per_1k_chars` or `openai:<model>:input_usd_per_mtok` / `output_usd_per_mtok`; the rate must be 0 to 100000).
+- Frontend: `/settings/usage` (card shown with `usage:read`). Migration `0009_usage_and_prices.sql`.
