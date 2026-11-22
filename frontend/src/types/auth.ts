@@ -24,6 +24,9 @@ export interface SessionUser {
   full_name: string;
   status: "active" | "invited" | "disabled";
   role: Role;
+  email_verified?: boolean;
+  /** True only when email sending is switched on and this address is not yet confirmed. */
+  email_verification_required?: boolean;
 }
 
 /** Returned by login, register and GET /auth/me. */

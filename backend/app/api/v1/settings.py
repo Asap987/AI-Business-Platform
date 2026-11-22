@@ -11,7 +11,7 @@ Pydantic's `extra="forbid"` (422).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,6 +68,7 @@ class BusinessUpdate(BaseModel):
 @router.patch("/profile")
 async def update_profile(
     payload: ProfileUpdate,
+    request: Request,
     principal: Principal = Depends(current_principal),
     db: AsyncSession = Depends(get_db),
 ):
@@ -82,12 +83,13 @@ async def update_profile(
     await db.commit()
     await db.refresh(user)
 
-    return _session_response(principal)
+    return _session_response(principal, request.app.state.email.enabled)
 
 
 @router.patch("/business")
 async def update_business(
     payload: BusinessUpdate,
+    request: Request,
     principal: Principal = Depends(require("business:write")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -110,4 +112,4 @@ async def update_business(
     await db.commit()
     await db.refresh(business)
 
-    return _session_response(principal)
+    return _session_response(principal, request.app.state.email.enabled)

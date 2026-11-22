@@ -20,6 +20,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import time
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -29,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.deps import Principal, get_db, has_permission, principal_from_token, require
 from app.api.v1.privacy import load_privacy
 from app.database.models import Agent, Department
+from app.services import audit
 from app.services.voice.call_runner import MAX_FRAME_BYTES, CallRunner
 from app.services.voice.errors import ProviderError
 from app.services.voice.schemas.transcription import STTStreamConfig
@@ -46,9 +48,50 @@ async def status(request: Request, p: Principal = Depends(require("voice:use")))
     settings = request.app.state.settings
     missing = missing_for_live_voice(settings)
     if not settings.elevenlabs_default_voice_id:
-        missing.append("ELEVENLABS_DEFAULT_VOICE_ID")
+        missing.append("ELEVENLABS_VOICE_ID")
     return {"available": request.app.state.voice_stack is not None and not missing, "missing": missing,
             "disabled_providers": sorted(settings.voice_disabled_providers)}
+
+
+PROBE_SECONDS = 20.0
+
+
+async def _probe(check) -> dict:
+    """Run one provider health check. Reports only ok/fail, the time taken and a coarse reason; never an exception
+    message (those can echo request details) and never a key."""
+    started = time.monotonic()
+    try:
+        ok = bool(await asyncio.wait_for(check(), PROBE_SECONDS))
+        reason = None if ok else "not_reachable_or_not_configured"
+    except asyncio.TimeoutError:
+        ok, reason = False, "timeout"
+    except Exception:
+        ok, reason = False, "error"
+    return {"ok": ok, "milliseconds": round((time.monotonic() - started) * 1000), "reason": reason}
+
+
+@router.post("/provider-check")
+async def provider_check(request: Request, p: Principal = Depends(require("voice:use")), db: AsyncSession = Depends(get_db)):
+    """Check that OpenAI and ElevenLabs accept our configuration before anyone starts a live test call.
+    OpenAI: looks up the configured model (no tokens used). ElevenLabs recognition: opens and closes a connection.
+    ElevenLabs speech: checks the key, and opens and closes a connection only if a health voice id is set.
+    None of these generates speech or sends customer data. Whether a bare connection is billed is unconfirmed."""
+    settings = request.app.state.settings
+    stack = request.app.state.voice_stack
+    missing = missing_for_live_voice(settings)
+    if not settings.elevenlabs_default_voice_id:
+        missing.append("ELEVENLABS_VOICE_ID")
+    if stack is None or missing:
+        return {"checked": False, "missing": missing, "results": {}}
+    if not request.app.state.auth_limiter.hit(f"provider-check:{p.business_id}"):
+        raise HTTPException(429, "Too many checks. Please wait and try again.")
+    probes = {"openai_reasoning": stack.reasoning, "elevenlabs_speech": stack.tts, "elevenlabs_recognition": stack.stt}
+    names = [n for n, engine in probes.items() if engine is not None]
+    done = await asyncio.gather(*[_probe(probes[n].health_check) for n in names])
+    results = dict(zip(names, done))
+    audit.record(db, p.business_id, p.user.id, "voice.provider_check", **{n: r["ok"] for n, r in results.items()})
+    await db.commit()
+    return {"checked": True, "missing": [], "all_ok": all(r["ok"] for r in results.values()), "results": results}
 
 
 async def _business_context(db: AsyncSession, business_id: UUID, name: str) -> str:

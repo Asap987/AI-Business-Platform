@@ -264,3 +264,43 @@ def test_stack_is_built_only_when_opted_in_with_both_keys():
     on = Settings(_env_file=None, voice_live_enabled=True, openai_api_key="k", elevenlabs_api_key="k", voice_disabled_providers=["openai"])
     stack = build_voice_stack(on, None)
     assert stack is not None and not stack.controls.is_enabled("openai") and stack.controls.is_enabled("elevenlabs")
+
+
+class Probe:
+    def __init__(self, result): self.result = result
+    async def health_check(self):
+        if isinstance(self.result, Exception):
+            raise self.result
+        if self.result == "slow":
+            await asyncio.sleep(60)
+        return self.result
+
+
+async def test_provider_check_reports_each_provider_without_leaking_errors(env):
+    a, a_id, b, _, factory = await two(env)
+    try:
+        r = await a.post("/api/v1/voice/provider-check")
+        assert r.json() == {"checked": False, "missing": ["VOICE_LIVE_ENABLED", "OPENAI_API_KEY", "ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID"], "results": {}}
+        stack = enable(env, voice_live_enabled=True, openai_api_key="k", elevenlabs_api_key="k")
+        stack.reasoning, stack.tts = Probe(True), Probe(RuntimeError("sk-SECRET leaked in message"))
+        stack.stt = Probe(False)
+        r = await a.post("/api/v1/voice/provider-check")
+        body = r.json()
+        assert body["checked"] is True and body["all_ok"] is False
+        assert body["results"]["openai_reasoning"]["ok"] is True
+        assert body["results"]["elevenlabs_speech"] == {"ok": False, "milliseconds": body["results"]["elevenlabs_speech"]["milliseconds"], "reason": "error"}
+        assert body["results"]["elevenlabs_recognition"]["reason"] == "not_reachable_or_not_configured"
+        assert "SECRET" not in r.text
+        stack.stt = Probe(True); stack.tts = Probe(True)
+        assert (await a.post("/api/v1/voice/provider-check")).json()["all_ok"] is True
+        from app.database.models import AuditEvent
+        from sqlalchemy import select
+        async with factory() as db:
+            ev = (await db.execute(select(AuditEvent).where(AuditEvent.action == "voice.provider_check"))).scalars().all()
+        assert len(ev) == 2 and all(e.business_id == a_id for e in ev) and "SECRET" not in str([e.detail for e in ev])
+        await add_user(factory, a_id, "Reader", ["cases:read"], "r@a.test")
+        rd = await login(env, "r@a.test")
+        assert (await rd.post("/api/v1/voice/provider-check")).status_code == 403
+        await rd.aclose()
+    finally:
+        await a.aclose(); await b.aclose()

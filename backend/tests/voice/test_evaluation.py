@@ -107,5 +107,5 @@ def test_live_check_names_missing_settings_without_values():
     env = {"PATH": "/usr/bin:/bin", "RUN_LIVE_PROVIDER_TESTS": "true", "OPENAI_API_KEY": "sk-test-not-real"}
     out = subprocess.run([sys.executable, str(BACKEND / "scripts" / "live_check.py"), "--yes-this-costs-money"],
                          capture_output=True, text=True, env=env, cwd=BACKEND)
-    assert out.returncode == 2 and "ELEVENLABS_API_KEY" in out.stdout and "ELEVENLABS_DEFAULT_VOICE_ID" in out.stdout
+    assert out.returncode == 2 and "ELEVENLABS_API_KEY" in out.stdout and "ELEVENLABS_VOICE_ID" in out.stdout
     assert "OPENAI_API_KEY" not in out.stdout and "sk-test-not-real" not in out.stdout + out.stderr

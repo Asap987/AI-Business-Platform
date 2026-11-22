@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { VerifyEmailBanner } from "@/components/layout/VerifyEmailBanner";
 import { MobileNavigation } from "@/components/layout/MobileNavigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
@@ -39,6 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           onOpenMobileNav={() => setMobileOpen(true)}
           notifications={notifications}
         />
+        <VerifyEmailBanner />
         <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 outline-none md:px-8 md:py-8">
           {children}
         </main>

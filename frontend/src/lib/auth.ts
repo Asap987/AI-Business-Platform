@@ -21,6 +21,8 @@ export const AUTH_ENDPOINTS = {
   inviteInfo: "/auth/invite-info",
   acceptInvite: "/auth/accept-invite",
   resetPassword: "/auth/reset-password",
+  verifyEmail: "/auth/verify-email",
+  resendVerification: "/auth/resend-verification",
 } as const;
 
 export function loginRequest(payload: LoginPayload): Promise<SessionResponse> {
@@ -71,4 +73,12 @@ export function acceptInviteRequest(payload: { token: string; password: string; 
 
 export function resetPasswordRequest(payload: { token: string; password: string }): Promise<void> {
   return api.post<void>(AUTH_ENDPOINTS.resetPassword, payload, { skipUnauthorizedHandler: true });
+}
+
+export function verifyEmailRequest(token: string): Promise<void> {
+  return api.post<void>(AUTH_ENDPOINTS.verifyEmail, { token }, { skipUnauthorizedHandler: true });
+}
+
+export function resendVerificationRequest(): Promise<void> {
+  return api.post<void>(AUTH_ENDPOINTS.resendVerification, {});
 }

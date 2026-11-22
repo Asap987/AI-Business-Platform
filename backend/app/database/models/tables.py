@@ -63,6 +63,8 @@ class User(_Stamped, Base):
     full_name: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String, default="active")
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    # Set when the address is proven (invitation accepted, or verification link used). NULL for older accounts.
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
 
 class Department(_Stamped, Base):
@@ -176,6 +178,16 @@ class UserInvite(Base):
 
 class PasswordReset(Base):
     __tablename__ = "password_resets"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = _fk("users")
+    token_hash: Mapped[str] = mapped_column(Text, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class EmailVerification(Base):
+    __tablename__ = "email_verifications"
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = _fk("users")
     token_hash: Mapped[str] = mapped_column(Text, unique=True)

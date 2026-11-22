@@ -91,6 +91,8 @@ class InviteIn(BaseModel):
 
 @router.post("/users/invites", status_code=201)
 async def create_invite(body: InviteIn, request: Request, p: Principal = Depends(require("users:write")), db: AsyncSession = Depends(get_db)):
+    if request.app.state.email.enabled and p.user.email_verified_at is None:
+        raise HTTPException(403, "Confirm your own email address first, then you can invite people.")
     await _role(db, p.business_id, body.role_id)
     if body.employee_id is not None:
         emp = (await db.execute(select(Employee).where(Employee.id == body.employee_id, Employee.business_id == p.business_id))).scalar_one_or_none()
@@ -216,7 +218,7 @@ async def accept_invite(body: AcceptIn, request: Request, response: Response, db
     if (await db.execute(select(func.count()).select_from(User).where(User.email == inv.email))).scalar_one():
         raise HTTPException(409, "An account with this email already exists")
     user = User(business_id=inv.business_id, role_id=role.id, email=inv.email, password_hash=hash_password(body.password),
-                full_name=name, last_login_at=datetime.now(timezone.utc))
+                full_name=name, last_login_at=datetime.now(timezone.utc), email_verified_at=datetime.now(timezone.utc))  # the invitation reached this address
     db.add(user)
     await db.flush()
     if emp is not None and emp.user_id is None and emp.business_id == inv.business_id:
@@ -225,4 +227,4 @@ async def accept_invite(body: AcceptIn, request: Request, response: Response, db
     audit.record(db, inv.business_id, user.id, "invite.accepted", invite_id=inv.id, user_id=user.id)
     await _start_session(db, user, business.id, response, settings)
     await db.commit()
-    return _session_response(Principal(user=user, role=role, business=business, session=None))  # type: ignore[arg-type]
+    return _session_response(Principal(user=user, role=role, business=business, session=None), request.app.state.email.enabled)  # type: ignore[arg-type]

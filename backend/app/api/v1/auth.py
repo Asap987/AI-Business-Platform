@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.deps import Principal, current_principal, get_db, get_settings_dep
 from app.core.config import Settings
 from app.core.security import hash_password, new_session_token, token_digest, verify_password
-from app.database.models import AuthSession, Business, PasswordReset, Role, User
+from app.database.models import AuthSession, Business, EmailVerification, PasswordReset, Role, User
 from app.services import audit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -46,10 +46,13 @@ class ResetBody(BaseModel):
     password: str = Field(min_length=10, max_length=256)
 
 
-def _session_response(p: Principal) -> dict:
+def _session_response(p: Principal, email_on: bool = False) -> dict:
     return {
         "user": {
             "id": str(p.user.id), "email": p.user.email, "full_name": p.user.full_name, "status": p.user.status,
+            "email_verified": p.user.email_verified_at is not None,
+            # True only when email is switched on and this address is not yet proven; the app shows a banner then.
+            "email_verification_required": email_on and p.user.email_verified_at is None,
             "role": {"id": str(p.role.id), "name": p.role.name,
                      "permissions": list(p.role.permissions) if isinstance(p.role.permissions, list) else []},
         },
@@ -95,11 +98,11 @@ async def login(body: LoginBody, request: Request, response: Response, db: Async
     await _start_session(db, user, business.id, response, settings)
     await db.commit()
     role = await db.get(Role, user.role_id)
-    return _session_response(Principal(user=user, role=role, business=business, session=None))  # type: ignore[arg-type]
+    return _session_response(Principal(user=user, role=role, business=business, session=None), request.app.state.email.enabled)  # type: ignore[arg-type]
 
 
 @router.post("/register", status_code=201)
-async def register(body: RegisterBody, request: Request, response: Response, db: AsyncSession = Depends(get_db),
+async def register(body: RegisterBody, request: Request, response: Response, tasks: BackgroundTasks, db: AsyncSession = Depends(get_db),
                    settings: Settings = Depends(get_settings_dep)):
     _limit(request, "register")
     email = body.email.lower()
@@ -122,8 +125,55 @@ async def register(body: RegisterBody, request: Request, response: Response, db:
     db.add(user)
     await db.flush()
     await _start_session(db, user, business.id, response, settings)
+    email = request.app.state.email
+    token = await _issue_verification(db, user, settings) if email.enabled else None
     await db.commit()
-    return _session_response(Principal(user=user, role=roles["Administrator"], business=business, session=None))  # type: ignore[arg-type]
+    if token:
+        tasks.add_task(email.send_verification, user.email, token, settings.email_verification_hours)
+    return _session_response(Principal(user=user, role=roles["Administrator"], business=business, session=None), email.enabled)  # type: ignore[arg-type]
+
+
+async def _issue_verification(db: AsyncSession, user: User, settings: Settings) -> str:
+    await db.execute(delete(EmailVerification).where(EmailVerification.user_id == user.id, EmailVerification.used_at.is_(None)))
+    token = new_session_token()
+    db.add(EmailVerification(user_id=user.id, token_hash=token_digest(token),
+                             expires_at=datetime.now(timezone.utc) + timedelta(hours=settings.email_verification_hours)))
+    return token
+
+
+class VerifyBody(BaseModel):
+    token: str = Field(min_length=20, max_length=200)
+
+
+@router.post("/verify-email", status_code=204)
+async def verify_email(body: VerifyBody, request: Request, db: AsyncSession = Depends(get_db)):
+    _limit(request, "verify")
+    row = (await db.execute(select(EmailVerification).where(EmailVerification.token_hash == token_digest(body.token)))).scalar_one_or_none()
+    expires = (row.expires_at if row.expires_at.tzinfo else row.expires_at.replace(tzinfo=timezone.utc)) if row else None
+    user = await db.get(User, row.user_id) if row else None
+    if not (row and row.used_at is None and expires > datetime.now(timezone.utc) and user):
+        raise HTTPException(404, "This confirmation link is invalid or has expired. Sign in and ask for a new one.")
+    now = datetime.now(timezone.utc)
+    row.used_at = now
+    if user.email_verified_at is None:
+        user.email_verified_at = now
+    audit.record(db, user.business_id, user.id, "email.verified")
+    await db.commit()
+    return Response(status_code=204)
+
+
+@router.post("/resend-verification", status_code=204)
+async def resend_verification(request: Request, tasks: BackgroundTasks, p: Principal = Depends(current_principal),
+                              db: AsyncSession = Depends(get_db), settings: Settings = Depends(get_settings_dep)):
+    email = request.app.state.email
+    if not email.enabled:
+        raise HTTPException(503, "Email is not set up on this system yet, so a confirmation email cannot be sent.")
+    _limit(request, "resend-verify", str(p.user.id))
+    if p.user.email_verified_at is None:
+        token = await _issue_verification(db, p.user, settings)
+        await db.commit()
+        tasks.add_task(email.send_verification, p.user.email, token, settings.email_verification_hours)
+    return Response(status_code=204, background=tasks)
 
 
 @router.post("/logout", status_code=204)
@@ -140,8 +190,8 @@ async def logout(request: Request, db: AsyncSession = Depends(get_db), settings:
 
 
 @router.get("/me")
-async def me(principal: Principal = Depends(current_principal)):
-    return _session_response(principal)
+async def me(request: Request, principal: Principal = Depends(current_principal)):
+    return _session_response(principal, request.app.state.email.enabled)
 
 
 @router.post("/forgot-password", status_code=204)

@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config import Settings
 from app.services.voice.conversation_manager import ConversationManager
 from app.services.voice.database_gateway import DatabaseBusinessGateway
+from app.services.voice.interfaces.reasoning import ReasoningEngine
 from app.services.voice.interfaces.speech_to_text import SpeechToText
+from app.services.voice.interfaces.text_to_speech import TextToSpeech
 from app.services.voice.language_manager import LanguageManager
 from app.services.voice.privacy import ProviderControls
 from app.services.voice.providers.elevenlabs_stt import ElevenLabsSTT
@@ -25,6 +27,9 @@ class VoiceStack:
     store: InMemorySessionStore
     controls: ProviderControls
     languages: LanguageManager
+    # Kept so the connection check can probe each provider; optional so test stacks can omit them.
+    reasoning: ReasoningEngine | None = None
+    tts: TextToSpeech | None = None
 
 
 def missing_for_live_voice(settings: Settings) -> list[str]:
@@ -47,11 +52,11 @@ def build_voice_stack(settings: Settings, session_factory: async_sessionmaker[As
         controls.disable(provider)
     languages = LanguageManager(settings)
     gateway = DatabaseBusinessGateway(session_factory, _no_customer)  # callers are not identified on a browser test call
-    manager = ConversationManager(
-        settings, OpenAIReasoning(settings, languages, controls=controls),
-        ElevenLabsTTS(settings, controls=controls), gateway, languages,
-    )
-    return VoiceStack(ElevenLabsSTT(settings, controls=controls), manager, InMemorySessionStore(settings), controls, languages)
+    reasoning = OpenAIReasoning(settings, languages, controls=controls)
+    tts = ElevenLabsTTS(settings, controls=controls)
+    manager = ConversationManager(settings, reasoning, tts, gateway, languages)
+    return VoiceStack(ElevenLabsSTT(settings, controls=controls), manager, InMemorySessionStore(settings), controls, languages,
+                      reasoning=reasoning, tts=tts)
 
 
 async def _no_customer(business_id, session_id):

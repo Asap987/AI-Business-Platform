@@ -12,7 +12,7 @@ from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import AliasChoices, BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -44,6 +44,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
+        populate_by_name=True,
     )
 
     environment: Literal["development", "test", "production"] = "development"
@@ -60,11 +61,14 @@ class Settings(BaseSettings):
     # "off" sends nothing. "resend" needs RESEND_API_KEY and EMAIL_FROM on a domain verified in Resend.
     email_provider: Literal["off", "resend"] = "off"
     resend_api_key: SecretStr | None = None
+    # Resend only sends once you have verified the sending domain with them AND set this to true. Until then nothing is sent.
+    email_domain_verified: bool = False
     email_from: str | None = None  # e.g. "KASORA AI <no-reply@mail.yourdomain.com>"
     email_timeout_seconds: float = Field(default=10.0, gt=0)
     # Public address of the web app; email links are built from this, never from request headers.
     app_base_url: str = "http://localhost:3000"
     password_reset_minutes: int = Field(default=60, ge=5, le=1440)
+    email_verification_hours: int = Field(default=48, ge=1, le=336)
 
     # ---- OpenAI (intelligence) -------------------------------------------
     openai_api_key: SecretStr | None = None
@@ -110,7 +114,8 @@ class Settings(BaseSettings):
     # Live voice is OFF until an administrator opts in: it calls paid providers.
     voice_live_enabled: bool = False
     voice_disabled_providers: list[str] = Field(default_factory=list)  # e.g. ["openai"] switches a provider off at startup
-    elevenlabs_default_voice_id: str | None = None  # used when an agent's config has no "voice_id"
+    # Used when an agent's config has no "voice_id". Set it as ELEVENLABS_VOICE_ID (ELEVENLABS_DEFAULT_VOICE_ID also works).
+    elevenlabs_default_voice_id: str | None = Field(default=None, validation_alias=AliasChoices("elevenlabs_voice_id", "elevenlabs_default_voice_id"))
     voice_default_language: str = "en"
     voice_session_max_seconds: int = 900
     voice_silence_timeout_seconds: int = 30

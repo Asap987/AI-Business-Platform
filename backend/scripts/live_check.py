@@ -4,7 +4,7 @@
     RUN_LIVE_PROVIDER_TESTS=true python scripts/live_check.py --yes-this-costs-money
 
 Needs these server-side settings (environment or backend/.env, which git ignores; never commit them):
-    OPENAI_API_KEY, ELEVENLABS_API_KEY, ELEVENLABS_DEFAULT_VOICE_ID
+    OPENAI_API_KEY, ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
 
 It sends no customer data: one fixed sentence to OpenAI, one short fixed sentence to ElevenLabs speech, and that
 generated audio back to ElevenLabs speech recognition. It prints timings and usage counts (never keys, never audio).
@@ -41,7 +41,7 @@ def missing(settings: Settings) -> list[str]:
     if settings.elevenlabs_api_key is None:
         out.append("ELEVENLABS_API_KEY")
     if not settings.elevenlabs_default_voice_id:
-        out.append("ELEVENLABS_DEFAULT_VOICE_ID")
+        out.append("ELEVENLABS_VOICE_ID")
     return out
 
 

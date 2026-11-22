@@ -66,6 +66,14 @@ class EmailService:
             ("Choose a new password", link), "If this was not you, ignore this email; your password has not changed.")
         return await self._send("password_reset", EmailMessage(to, f"Reset your {self._product} password", text, html))
 
+    async def send_verification(self, to: str, token: str, hours: int) -> bool:
+        link = f"{self._base}/verify-email#token={token}"
+        text, html = self._wrap(
+            "Confirm your email address",
+            ["Please confirm this email address for your account.", f"The link works once and expires in {hours} hours."],
+            ("Confirm email", link), "If you did not create this account, ignore this email.")
+        return await self._send("verify_email", EmailMessage(to, f"Confirm your {self._product} email", text, html))
+
     async def send_password_changed_notice(self, to: str) -> bool:
         text, html = self._wrap(
             "Your password was changed",
@@ -76,8 +84,9 @@ class EmailService:
 
 
 def build_email_service(settings: Settings) -> EmailService:
-    """Off unless EMAIL_PROVIDER=resend, RESEND_API_KEY and EMAIL_FROM (a verified sending domain) are all set."""
+    """Off unless EMAIL_PROVIDER=resend, RESEND_API_KEY, EMAIL_FROM and EMAIL_DOMAIN_VERIFIED=true are all set.
+    The last one is a deliberate human step: nothing is sent until the sending domain is verified with the provider."""
     provider: EmailProvider | None = None
-    if settings.email_provider == "resend" and settings.resend_api_key is not None:
+    if settings.email_provider == "resend" and settings.resend_api_key is not None and settings.email_domain_verified:
         provider = ResendProvider(settings.resend_api_key.get_secret_value(), timeout=settings.email_timeout_seconds)
     return EmailService(provider, settings.email_from, settings.app_base_url)
