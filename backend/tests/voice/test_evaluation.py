@@ -31,6 +31,8 @@ def test_term_recall_needs_whole_words_and_phrases():
     assert term_recall(["Volta", "cold room"], "we have a cold room in Volta") == 1.0
     assert term_recall(["Bono"], "Bonomi is far") == 0.0  # not a whole word
     assert term_recall(["Bono", "Kaneshie"], "Kaneshie only") == 0.5
+    assert term_recall(["20/twenty", "22 november/november 22"], "twenty tonnes by 22 November") == 1.0
+    assert term_recall(["20/twenty"], "twelve tonnes") == 0.0
     assert term_recall([], "anything") is None
 
 

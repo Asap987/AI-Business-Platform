@@ -52,11 +52,13 @@ def word_error_rate(reference: str, hypothesis: str) -> float:
 
 
 def term_recall(terms: list[str], hypothesis: str) -> float | None:
-    """Share of expected terms present as whole words (or phrases) in the transcript; None when no terms."""
+    """Share of expected terms present as whole words (or phrases) in the transcript; None when no terms.
+    Numbers, dates and prices can be written either way: give alternatives as "20/twenty"."""
     if not terms:
         return None
-    hyp = " ".join(normalize(hypothesis))
-    found = sum(1 for t in terms if f" {' '.join(normalize(t))} " in f" {hyp} ")
+    hyp = f" {' '.join(normalize(hypothesis))} "
+    # A term may list accepted spellings separated by "/", e.g. "20/twenty" or "GH₵50/fifty cedis".
+    found = sum(1 for t in terms if any(f" {' '.join(normalize(alt))} " in hyp for alt in t.split("/") if normalize(alt)))
     return found / len(terms)
 
 
