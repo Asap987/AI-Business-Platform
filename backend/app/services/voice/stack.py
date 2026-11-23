@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
+from app.services.telephony import TransferService
+from app.services.telephony.mock import MockTelephony
 from app.services.voice.conversation_manager import ConversationManager
 from app.services.voice.database_gateway import DatabaseBusinessGateway
 from app.services.voice.interfaces.reasoning import ReasoningEngine
@@ -51,7 +53,8 @@ def build_voice_stack(settings: Settings, session_factory: async_sessionmaker[As
     for provider in settings.voice_disabled_providers:
         controls.disable(provider)
     languages = LanguageManager(settings)
-    gateway = DatabaseBusinessGateway(session_factory, _no_customer)  # callers are not identified on a browser test call
+    # No real telephony provider is approved: transfers are SIMULATED and the assistant is told so in every result.
+    gateway = DatabaseBusinessGateway(session_factory, _no_customer, TransferService(MockTelephony()))  # callers are not identified on a browser test call
     reasoning = OpenAIReasoning(settings, languages, controls=controls)
     tts = ElevenLabsTTS(settings, controls=controls)
     manager = ConversationManager(settings, reasoning, tts, gateway, languages)

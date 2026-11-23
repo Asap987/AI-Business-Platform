@@ -24,6 +24,7 @@ class TransferOutcome(str, Enum):
 class TransferTarget:
     phone: str  # E.164, e.g. +233...
     label: str  # for people reading logs (a name or department), never used for routing
+    extension: str | None = None  # dialled after connecting when the carrier reaches a switchboard
 
 
 @dataclass(frozen=True)

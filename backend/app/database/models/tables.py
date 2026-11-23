@@ -73,6 +73,11 @@ class Department(_Stamped, Base):
     business_id: Mapped[UUID] = _fk("businesses")
     name: Mapped[str] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text, default=None)
+    # Routing. hours None = always open; see app.services.telephony.schedule for the format.
+    hours: Mapped[Any | None] = mapped_column(Json, default=None)
+    timezone: Mapped[str | None] = mapped_column(Text, default=None)
+    fallback_department_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("departments.id", ondelete="SET NULL"), default=None)
+    accepts_transfers: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class Employee(_Stamped, Base):
@@ -85,6 +90,24 @@ class Employee(_Stamped, Base):
     phone: Mapped[str | None] = mapped_column(Text, default=None)
     job_title: Mapped[str | None] = mapped_column(Text, default=None)
     status: Mapped[str] = mapped_column(String, default="active")
+    extension: Mapped[str | None] = mapped_column(Text, default=None)
+    available: Mapped[bool] = mapped_column(Boolean, default=True)
+    routing_priority: Mapped[int] = mapped_column(Integer, default=100)
+
+
+class CallbackRequest(_Stamped, Base):
+    __tablename__ = "callback_requests"
+    business_id: Mapped[UUID] = _fk("businesses")
+    department_id: Mapped[UUID | None] = _fk("departments", True)
+    customer_id: Mapped[UUID | None] = _fk("customers", True)
+    caller_name: Mapped[str | None] = mapped_column(Text, default=None)
+    phone: Mapped[str] = mapped_column(Text)
+    reason: Mapped[str] = mapped_column(Text)
+    preferred_time: Mapped[str | None] = mapped_column(Text, default=None)
+    context: Mapped[Any] = mapped_column(Json, default=dict)
+    source: Mapped[str] = mapped_column(String, default="ai")
+    status: Mapped[str] = mapped_column(String, default="pending")
+    note: Mapped[str | None] = mapped_column(Text, default=None)
 
 
 class Agent(_Stamped, Base):
