@@ -1,3 +1,3 @@
 from app.database.models.tables import (  # noqa: F401
-    Agent, AuthSession, Base, Business, CallbackRequest, Case, CaseEvent, Conversation, Customer, Department, Employee, AuditEvent, EmailVerification, BusinessPrivacy, KnowledgeChunk, KnowledgeDocument, PasswordReset, PriceRecord, UsageSession, ProjectTask, ProjectMilestone, ProjectExternal, ProjectFinance, ProjectTestRun, Role, User, UserInvite,
+    Agent, AuthSession, Base, Business, BusinessProfile, CallbackRequest, Case, CaseEvent, Conversation, Customer, Department, Employee, AuditEvent, EmailVerification, BusinessPrivacy, KnowledgeChunk, KnowledgeDocument, PasswordReset, PriceRecord, UsageSession, ProjectTask, ProjectMilestone, ProjectExternal, ProjectFinance, ProjectTestRun, Role, User, UserInvite,
 )

@@ -21,7 +21,7 @@ const SECTIONS: SettingsLink[] = [
   { href: "/settings/team", title: "Team", description: "Invite staff, change roles, disable logins.", icon: Users, permission: "users:read" },
   { href: "/settings/privacy", title: "Privacy & AI", description: "Control AI providers, masking and the activity log.", icon: ShieldCheck, permission: "privacy:read" },
   { href: "/settings/usage", title: "Usage & costs", description: "Calls, AI usage and estimated cost.", icon: ChartColumn, permission: "usage:read" },
-  { href: "/settings/business", title: "Business Settings", description: "Business details and preferences.", icon: Building2 },
+  { href: "/settings/business", title: "Business details", description: "Contact details, branches, hours, policies and how assistants should speak.", icon: Building2 },
 ];
 
 export function SettingsLinks() {

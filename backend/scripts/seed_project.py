@@ -44,7 +44,7 @@ TASKS = [
     ("admin.org", "admin", "Departments and employees", "completed", "high", 3, T, "tests/api/test_organization.py", "", [], None, ""),
     ("admin.team", "admin", "Staff invitations, roles, disabling accounts", "completed", "high", 3, T, "tests/api/test_team.py and a Chromium run", "", [], None, ""),
     ("admin.settings-api", "admin", "PATCH /profile and PATCH /business endpoints", "completed", "medium", 2, T, "tests/api/test_settings.py with mutation checks", "", [], None, ""),
-    ("admin.settings-screens", "admin", "Profile and Business settings screens", "not_started", "high", 2, None, "", "", ["admin.settings-api"], None, ""),
+    ("admin.settings-screens", "admin", "Profile and Business settings screens", "completed", "high", 2, T, "tests/api/test_business_profile.py (5 tests, mutation-checked); Chromium run 12 of 12 checks incl. other-business view and 390 px", "", ["admin.settings-api"], None, "Branches, hours, policies, languages and service preferences are saved but not yet read by the assistants."),
     ("admin.org-profile", "admin", "Organisation profile: hours, contacts, languages, products, policies", "not_started", "high", 4, None, "", "", [], None, ""),
     ("admin.ai-config", "admin", "AI configuration screen: name, tone, language, voice, instructions", "not_started", "high", 4, None, "", "", ["admin.org-profile"], None, ""),
     ("admin.test-chat", "admin", "Text test chat and scripted scenarios before activation", "not_started", "medium", 3, None, "", "", ["admin.ai-config"], None, ""),
@@ -119,7 +119,7 @@ TASKS = [
     ("usage.telephony", "usage", "Telephony cost per call", "not_started", "medium", 2, None, "", "", ["tel.adapter"], None, ""),
     ("usage.billing", "usage", "Subscription plans and billing", "not_started", "medium", 5, None, "", "", ["usage.record"], None, ""),
     # ---- testing
-    ("test.backend", "testing", "Offline backend test suite (fakes, no paid calls)", "completed", "high", 3, T, "274 passed, 2 skipped on SQLite (run 2026-11-22)", "", [], None, ""),
+    ("test.backend", "testing", "Offline backend test suite (fakes, no paid calls)", "completed", "high", 3, T, "302 passed, 2 skipped on SQLite; 155 passed on PostgreSQL API suite (run 2026-11-23)", "", [], None, ""),
     ("test.project-dashboard", "testing", "Project progress dashboard for platform administrators", "completed", "medium", 2, T, "tests/api/test_project_tracker.py (11 tests) and a Chromium run: 18 of 18 checks, including 404 for another business and no horizontal scroll at 390 px", "", [], None, ""),
     ("test.e2e", "testing", "Commit the browser end-to-end scripts to the repository", "not_started", "high", 3, None, "", "Scripts exist only in a scratch folder", [], None, ""),
     ("test.ci", "testing", "Continuous integration (tests, type check, lint, build on every push)", "not_started", "high", 3, None, "", "", [], "monitoring", ""),

@@ -45,6 +45,24 @@ class Business(_Stamped, Base):
     status: Mapped[str] = mapped_column(String, default="active")
 
 
+class BusinessProfile(Base):
+    """One row per business: what the assistants and staff should know about the organisation."""
+    __tablename__ = "business_profiles"
+    business_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True)
+    description: Mapped[str | None] = mapped_column(Text, default=None)
+    contact_phone: Mapped[str | None] = mapped_column(Text, default=None)
+    contact_email: Mapped[str | None] = mapped_column(Text, default=None)
+    website: Mapped[str | None] = mapped_column(Text, default=None)
+    address: Mapped[str | None] = mapped_column(Text, default=None)
+    branches: Mapped[Any] = mapped_column(Json, default=list)
+    hours: Mapped[Any | None] = mapped_column(Json, default=None)
+    policies: Mapped[Any] = mapped_column(Json, default=list)
+    languages: Mapped[Any] = mapped_column(Json, default=list)
+    preferences: Mapped[Any] = mapped_column(Json, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
 class Role(_Stamped, Base):
     __tablename__ = "roles"
     __table_args__ = (UniqueConstraint("business_id", "name"),)

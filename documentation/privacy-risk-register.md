@@ -49,6 +49,7 @@ Scale: likelihood and impact Low/Medium/High. Status: Open, Mitigated in code, A
 | R13 | Platform administrator misuse | L | H | Platform access by explicit user-id list; totals only, no content; every platform view or price change audited | Dual control for adding platform admins; alerting on platform access | Partly mitigated |
 | R14 | Provider outage or silent failure shown as working | M | M | Provider check before live calls; live voice off unless checks configured; failures counted | Alerting; fallback to human on repeated failure (hand-over exists) | Partly mitigated |
 | R15 | Cost runaway | M | M | Per-call usage and cost estimates, per-business concurrent and per-minute call limits | Per-business monthly budget caps and alerts; provider-side spend limits | Partly mitigated |
+| R16 | Callback records and business profile hold personal and business details | L | M | Organisation-only access (two-business tests); callback context never in audit; profile audit lists field names only; nothing sent to AI providers without the privacy gate | Retention and deletion for callbacks (see R10); decide what profile text may be sent to AI providers | Open |
 
 ## 4. Ghana Data Protection Act, 2012 (Act 843): items for a qualified Ghanaian professional
 I am not giving legal conclusions. Please have these confirmed:

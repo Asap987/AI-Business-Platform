@@ -200,3 +200,23 @@ export interface UsageCall {
   cost_complete: boolean;
   missing_rates: string[];
 }
+
+export interface BusinessBranch { name: string; address: string | null; phone: string | null }
+export interface BusinessPolicy { title: string; text: string }
+export type ServiceTone = "friendly" | "professional" | "formal";
+export interface BusinessProfile {
+  name: string;
+  industry: string | null;
+  country: string | null;
+  timezone: string;
+  description: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  website: string | null;
+  address: string | null;
+  branches: BusinessBranch[];
+  hours: Record<string, string[][]> | null;
+  policies: BusinessPolicy[];
+  languages: string[];
+  preferences: { greeting?: string; tone?: ServiceTone; after_hours_message?: string; escalation_note?: string };
+}

@@ -44,6 +44,8 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   retrySession: () => void;
   switchBusiness: (businessId: string) => Promise<void>;
+  /** Re-reads the session so a changed name shows everywhere (sidebar, menus). */
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -176,6 +178,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [state.business?.id],
   );
 
+  const refreshSession = useCallback(async () => {
+    setState(fromSession(await fetchSession()));
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       status: state.status,
@@ -192,8 +198,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       retrySession,
       switchBusiness,
+      refreshSession,
     }),
-    [state, login, register, acceptInvite, logout, retrySession, switchBusiness],
+    [state, login, register, acceptInvite, logout, retrySession, switchBusiness, refreshSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

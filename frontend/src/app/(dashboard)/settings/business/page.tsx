@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { ModulePlaceholder } from "@/components/layout/ModulePlaceholder";
+import { BusinessProfileView } from "@/features/business/BusinessProfileView";
 
-export const metadata: Metadata = { title: "Business Settings" };
+export const metadata: Metadata = { title: "Business Details" };
 
 export default function BusinessSettingsPage() {
-  return <ModulePlaceholder module="business" />;
+  return <BusinessProfileView />;
 }

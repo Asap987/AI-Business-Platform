@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.v1 import auth, callbacks, cases, customers, dashboard, knowledge, organization, privacy, project, team, usage, voice
+from app.api.v1 import business_profile as business_profile_api
 from app.api.v1 import settings as settings_api
 from app.core.config import Settings, get_settings
 from app.core.security import RateLimiter
@@ -68,6 +69,7 @@ def create_app(settings: Settings | None = None, session_factory: async_sessionm
     app.include_router(project.router, prefix="/api/v1")
     app.include_router(voice.router, prefix="/api/v1")
     app.include_router(settings_api.router, prefix="/api/v1")
+    app.include_router(business_profile_api.router, prefix="/api/v1")
 
     @app.get("/health")
     async def health():

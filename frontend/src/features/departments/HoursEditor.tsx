@@ -43,15 +43,15 @@ export function HoursEditor({ week, onChange }: { week: WeekState; onChange: (w:
       {DAYS.map(({ key, label }) => {
         const d = week[key];
         return (
-          <li key={key} className="grid grid-cols-[7.5rem_1fr] items-center gap-2 sm:grid-cols-[9rem_1fr]">
+          <li key={key} className="grid grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[9rem_minmax(0,1fr)]">
             <label className="flex items-center gap-2 text-sm text-ink">
               <input type="checkbox" checked={d.open} onChange={(e) => set(key, { open: e.target.checked })} /> {label}
             </label>
             {d.open ? (
-              <div className="flex items-center gap-2">
-                <Input label={`${label} opens`} hideLabel type="time" value={d.start} onChange={(e) => set(key, { start: e.target.value })} />
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="min-w-0 flex-1"><Input label={`${label} opens`} hideLabel type="time" value={d.start} onChange={(e) => set(key, { start: e.target.value })} /></div>
                 <span aria-hidden="true" className="text-muted">to</span>
-                <Input label={`${label} closes`} hideLabel type="time" value={d.end} onChange={(e) => set(key, { end: e.target.value })} />
+                <div className="min-w-0 flex-1"><Input label={`${label} closes`} hideLabel type="time" value={d.end} onChange={(e) => set(key, { end: e.target.value })} /></div>
                 {d.extra.length ? <span className="text-xs text-muted">+{d.extra.length} more range(s) kept</span> : null}
               </div>
             ) : <span className="text-sm text-muted">Closed</span>}

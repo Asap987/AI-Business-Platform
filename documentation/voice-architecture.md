@@ -118,6 +118,10 @@ backend/.env.example
 
 Run the tests: `cd backend && pip install -r requirements.txt && python -m pytest`.
 
+## 6b. Departmental routing (2026-11-22/23)
+
+`TransferService` checks, in order: department exists in the same business, accepts transfers, is open (hours and time zone), has active and available staff with a number. Staff are tried by `routing_priority`; a fallback department is used if nobody can be reached (same business, never loops, at most 3 hops, 3 attempts in total). If nothing works the assistant offers a callback. Conversation context (`HandoverContext`) goes to the receiver as a briefing and onto the callback record, never into the audit trail. Only `MockTelephony` exists: results are labelled simulated and the assistant is told not to say the caller is connected. Not built: AI-to-AI hand-over between department assistants, a department switchboard model, any real provider adapter.
+
 ## 7. Next phases
 
 Phases 5–9 are done (offline). Remaining: opt-in live provider tests (paid, with explicit approval); the real backend API and database; telephony adapter and call lifecycle; wiring model fallback; the Control Center provider-privacy screen; accuracy tests per language.

@@ -187,7 +187,7 @@ The sidebar, the phone drawer, the header page search and the Settings cards now
 - Email is off unless `EMAIL_PROVIDER=resend`, `RESEND_API_KEY` and `EMAIL_FROM` are set. See `live-testing-and-email-setup.md`.
 - Frontend page: `/reset-password` (token read from the fragment, then removed from the address bar).
 
-## Profile and business name (backend added 2026-11-21; screens not built yet)
+## Profile and business name (backend 2026-11-21; screens 2026-11-23)
 
 - `PATCH /profile {full_name}`: any signed-in user, own name only (2 to 120 characters, unknown fields rejected with 422). Returns the same body as `GET /auth/me`.
 - `PATCH /business {name}`: needs `business:write` (Administrator). Writes an audit event `business.updated` with `changed: ["name"]`. Returns the same body as `GET /auth/me`.
@@ -199,3 +199,17 @@ Measured counts per call (speech seconds, speech characters, AI requests and tok
 - `GET /usage/calls?page&page_size`: the business's own calls, newest first, each with its estimated cost. This is also the cost per conversation or call.
 - Platform (people who run KASORA): the user id must be listed in `PLATFORM_ADMIN_USER_IDS`, otherwise 404. `GET /platform/usage?month=YYYY-MM` returns totals per business (no calls, no content) and is audited; `GET/POST /platform/prices` manages price records (`item` is `elevenlabs_stt_usd_per_hour`, `elevenlabs_tts_usd_per_1k_chars` or `openai:<model>:input_usd_per_mtok` / `output_usd_per_mtok`; the rate must be 0 to 100000).
 - Frontend: `/settings/usage` (card shown with `usage:read`). Migration `0009_usage_and_prices.sql`.
+
+## Business profile (added 2026-11-23, migration 0012)
+
+- `GET /business/profile`: any signed-in member; returns the caller's own business only. `PUT /business/profile`: needs `business:write`; the whole profile is replaced (no id in URL or body, unknown fields give 422).
+- Fields: `name`, `industry`, `country`, `timezone` (must be a known IANA zone), `description` (2000), `contact_phone`, `contact_email`, `website` (http/https), `address`, `branches[]` (`name`, `address`, `phone`; max 20), `hours` (same format as department hours; `null` = not stated), `policies[]` (`title`, `text`; max 30), `languages[]` (max 12, duplicates dropped), `preferences` (`greeting`, `tone` friendly|professional|formal, `after_hours_message`, `escalation_note`).
+- Audit event `business.profile_updated` lists changed field names only, never values.
+- Screens: Settings → My profile (own name) and Settings → Business details (all of the above; read-only for people without `business:write`).
+
+## Routing and callbacks (added 2026-11-22/23, migration 0011)
+
+- Departments: `hours`, `timezone`, `fallback_department_id`, `accepts_transfers`; `GET /departments/{id}/availability` returns open/closed and staff counts only.
+- Employees: `extension`, `available`, `routing_priority`.
+- `POST/GET/PATCH /callbacks` (`cases:write` / `cases:read`). A callback is a request, not a booked time; statuses pending, contacted, done, cancelled.
+- All transfers are simulated. A transfer counts as successful only when a provider confirms it; no real provider adapter exists.
