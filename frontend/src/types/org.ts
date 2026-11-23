@@ -47,6 +47,11 @@ export interface Department {
   employee_count?: number;
   open_cases?: number;
   created_at: string;
+  /** null = always open; otherwise day key (mon..sun) -> ["HH:MM","HH:MM"] ranges. A missing day is closed. */
+  hours: Record<string, string[][]> | null;
+  timezone: string | null;
+  fallback_department_id: string | null;
+  accepts_transfers: boolean;
 }
 
 export interface Employee {
@@ -58,7 +63,28 @@ export interface Employee {
   department_id: string | null;
   status: EmployeeStatus;
   has_login: boolean;
+  extension: string | null;
+  available: boolean;
+  routing_priority: number;
   created_at: string;
+}
+
+export type CallbackStatus = "pending" | "contacted" | "done" | "cancelled";
+
+export interface CallbackRequest {
+  id: string;
+  department_id: string | null;
+  customer_id: string | null;
+  caller_name: string | null;
+  phone: string;
+  reason: string;
+  preferred_time: string | null;
+  context: { intent?: string; summary?: string; collected?: Record<string, string>; done?: string[]; open_questions?: string[] };
+  source: "ai" | "staff";
+  status: CallbackStatus;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface TeamRole {

@@ -34,6 +34,9 @@ function EmployeeForm({ employee, onSaved, onCancel }: { employee: Employee | nu
   const [jobTitle, setJobTitle] = useState(employee?.job_title ?? "");
   const [departmentId, setDepartmentId] = useState(employee?.department_id ?? "");
   const [status, setStatus] = useState<EmployeeStatus>(employee?.status ?? "active");
+  const [extension, setExtension] = useState(employee?.extension ?? "");
+  const [available, setAvailable] = useState(employee?.available ?? true);
+  const [priority, setPriority] = useState(String(employee?.routing_priority ?? 100));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -45,8 +48,16 @@ function EmployeeForm({ employee, onSaved, onCancel }: { employee: Employee | nu
       setErrors({ full_name: "Enter the employee's name." });
       return;
     }
+    const order = Number(priority);
+    if (!Number.isInteger(order) || order < 1 || order > 1000) {
+      setErrors({ routing_priority: "Use a whole number from 1 to 1000." });
+      return;
+    }
     setErrors({});
     const body = {
+      extension: extension.trim() || null,
+      available,
+      routing_priority: order,
       full_name: fullName.trim(),
       email: email.trim() || null,
       phone: phone.trim() || null,
@@ -82,6 +93,16 @@ function EmployeeForm({ employee, onSaved, onCancel }: { employee: Employee | nu
           ))}
         </Select>
       </div>
+      <fieldset className="rounded-lg border border-border p-3">
+        <legend className="px-1 text-sm font-medium text-ink">When a call is transferred</legend>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input label="Extension (optional)" name="extension" inputMode="numeric" value={extension} onChange={(e) => setExtension(e.target.value)} error={errors.extension} maxLength={20} hint="Digits, * or # only." />
+          <Input label="Call order" name="routing_priority" inputMode="numeric" value={priority} onChange={(e) => setPriority(e.target.value)} error={errors.routing_priority} hint="Lower numbers are tried first." />
+        </div>
+        <label className="mt-3 flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" checked={available} onChange={(e) => setAvailable(e.target.checked)} /> Available to take transferred calls
+        </label>
+      </fieldset>
       {departments.allowed ? (
         <Select label="Department" name="department" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} error={errors.department_id}>
           <option value="">No department</option>
@@ -200,10 +221,11 @@ export function EmployeesView() {
                       <TableCell>{e.department_id ? (departments.names.get(e.department_id) ?? "—") : "—"}</TableCell>
                       <TableCell>
                         <p>{e.email ?? "—"}</p>
-                        {e.phone ? <p className="text-sm text-muted">{e.phone}</p> : null}
+                        {e.phone ? <p className="text-sm text-muted">{e.phone}{e.extension ? ` ext. ${e.extension}` : ""}</p> : null}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={e.status} />
+                        {!e.available ? <p className="mt-1 text-xs text-muted">Not taking transfers</p> : null}
                       </TableCell>
                       {canWrite ? (
                         <TableCell className="text-right">

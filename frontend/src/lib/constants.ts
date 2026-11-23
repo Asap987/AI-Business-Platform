@@ -69,6 +69,7 @@ export const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { id: "cases", label: "Cases & Escalations", href: "/cases", icon: LifeBuoy, permission: "cases:read" },
+      { id: "callbacks", label: "Callback requests", href: "/callbacks", icon: PhoneCall, permission: "cases:read" },
     ],
   },
   {
@@ -110,6 +111,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   conversations: "Conversations",
   "voice-test": "Voice test call",
   cases: "Cases & Escalations",
+  callbacks: "Callback requests",
   customers: "Customers",
   knowledge: "Knowledge Base",
   workflows: "Workflows",

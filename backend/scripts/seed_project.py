@@ -56,7 +56,7 @@ TASKS = [
     ("ai.live-openai", "ai", "Verify the OpenAI adapter against the real API", "awaiting_external", "critical", 3, None, "", "Needs the OpenAI key as a server setting", ["ai.reasoning"], "voice_quality", ""),
     ("ai.manager", "ai", "Conversation manager: turns, interruption, language, hand-over", "completed", "high", 4, T, "tests/voice/test_conversation_manager.py", "", [], None, ""),
     ("ai.tools", "ai", "Validated backend tools only (no SQL); business scoped", "completed", "critical", 4, T, "tests/voice/test_voice_database_gateway.py and cross-business tool tests", "", [], None, ""),
-    ("ai.route-intent", "ai", "Connect intent recognition to department transfer", "not_started", "high", 3, None, "", "", ["routing.service"], None, ""),
+    ("ai.route-intent", "ai", "Connect intent recognition to department transfer", "in_progress", "high", 3, None, "", "Tools are wired and tested with fakes; how the live model chooses them is unverified until credentials and privacy approval", ["routing.service"], None, ""),
     ("ai.injection", "ai", "Prompt-injection tests with hostile callers and documents", "not_started", "high", 3, None, "", "", [], "security", ""),
     ("ai.delta-horta", "ai", "Delta Horta scripted scenarios (transport versus storage, unverified capacity)", "not_started", "high", 3, None, "", "", ["admin.test-chat"], None, ""),
     # ---- knowledge
@@ -90,11 +90,11 @@ TASKS = [
     ("tel.real-transfer", "telephony", "Real call transfer to a person, confirmed by the provider", "not_started", "critical", 4, None, "", "", ["tel.adapter", "routing.service"], "call_transfers", ""),
     # ---- routing
     ("routing.service", "routing", "Transfer decision logic with simulated provider", "completed", "high", 3, T, "tests/api/test_transfer.py (business scoping, attempts, honest outcomes, audit without numbers)", "", [], None, "Simulated; real transfers are a separate task."),
-    ("routing.hours", "routing", "Department operating hours and availability", "in_progress", "high", 3, None, "", "", ["routing.service"], None, ""),
-    ("routing.extensions", "routing", "Employee extensions and availability", "not_started", "medium", 2, None, "", "", ["routing.service"], None, ""),
-    ("routing.fallback", "routing", "Routing priorities and fallback rules", "not_started", "medium", 3, None, "", "", ["routing.hours"], None, ""),
-    ("routing.callback", "routing", "Callback requests and human escalation records", "not_started", "high", 3, None, "", "", ["routing.service"], None, ""),
-    ("routing.context", "routing", "Preserve conversation context across departments", "not_started", "high", 3, None, "", "", ["routing.service", "ai.manager"], None, ""),
+    ("routing.hours", "routing", "Department operating hours and availability", "completed", "high", 3, T, "tests/api/test_routing.py: hours rules, time zones, closed departments, availability endpoint; screen checked in Chromium", "", ["routing.service"], None, "Simulated provider only."),
+    ("routing.extensions", "routing", "Employee extensions and availability", "completed", "medium", 2, T, "tests/api/test_routing.py: extension passed to provider, unavailable staff skipped, API validation and isolation", "", ["routing.service"], None, ""),
+    ("routing.fallback", "routing", "Routing priorities and fallback rules", "completed", "medium", 3, T, "tests/api/test_routing.py: priority order, same-business fallback, loop cut, shared attempt budget, mutation-checked", "", ["routing.hours"], None, ""),
+    ("routing.callback", "routing", "Callback requests and human escalation records", "completed", "high", 3, T, "tests/api/test_routing.py: callbacks API isolation, permissions, status rules, audit without numbers; Chromium run 12 of 13 checks plus a re-check", "", ["routing.service"], None, "A callback is a request, not a booked time."),
+    ("routing.context", "routing", "Preserve conversation context across departments", "in_progress", "high", 3, None, "", "AI-to-AI agent handover is not built; context is carried to callbacks and returned for a receiving person", ["routing.service", "ai.manager"], None, ""),
     # ---- email
     ("email.service", "email", "Email service with Resend adapter, templates, invitations, reset, verification, notices (offline)", "completed", "high", 4, T, "tests/api/test_email.py and a Chromium run with a fake provider", "", [], None, "No email has been sent for real."),
     ("email.domain", "email", "Verify the sending domain in Resend and set the key", "awaiting_external", "high", 2, None, "", "Owner provides the domain and verifies DNS records", ["email.service"], "email_delivery", ""),

@@ -11,9 +11,10 @@ import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/LoadingSpinner";
 import { ConfirmDialog, Modal } from "@/components/ui/Modal";
 import { ResourceView } from "@/components/ui/ResourceView";
-import { Textarea } from "@/components/ui/Select";
+import { Select, Textarea } from "@/components/ui/Select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
-import { errorText } from "@/features/org/shared";
+import { errorText, useDepartmentOptions } from "@/features/org/shared";
+import { fromWeek, HoursEditor, summariseHours, toWeek } from "./HoursEditor";
 import { useApiResource } from "@/hooks/useApiResource";
 import { usePermission } from "@/hooks/usePermission";
 import { api, ApiError } from "@/lib/api";
@@ -23,6 +24,12 @@ import type { Department } from "@/types/org";
 function DepartmentForm({ department, onSaved, onCancel }: { department: Department | null; onSaved: () => void; onCancel: () => void }) {
   const [name, setName] = useState(department?.name ?? "");
   const [description, setDescription] = useState(department?.description ?? "");
+  const [alwaysOpen, setAlwaysOpen] = useState(department ? department.hours === null : true);
+  const [week, setWeek] = useState(() => toWeek(department?.hours ?? null));
+  const [timezone, setTimezone] = useState(department?.timezone ?? "");
+  const [fallbackId, setFallbackId] = useState(department?.fallback_department_id ?? "");
+  const [accepts, setAccepts] = useState(department?.accepts_transfers ?? true);
+  const others = useDepartmentOptions().items.filter((d) => d.id !== department?.id);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -35,7 +42,17 @@ function DepartmentForm({ department, onSaved, onCancel }: { department: Departm
       return;
     }
     setErrors({});
-    const body = { name: name.trim(), description: description.trim() || null };
+    const hours = alwaysOpen ? null : fromWeek(week);
+    for (const spans of Object.values(hours ?? {})) {
+      if (spans[0][0] >= spans[0][1]) {
+        setErrors({ hours: "Each day must close after it opens." });
+        return;
+      }
+    }
+    const body = {
+      name: name.trim(), description: description.trim() || null, hours, timezone: timezone.trim() || null,
+      fallback_department_id: fallbackId || null, accepts_transfers: accepts,
+    };
     setSaving(true);
     try {
       if (department) await api.patch(`/departments/${department.id}`, body);
@@ -53,6 +70,22 @@ function DepartmentForm({ department, onSaved, onCancel }: { department: Departm
       {formError ? <FormError message={formError} /> : null}
       <Input label="Department name" name="name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} maxLength={100} />
       <Textarea label="What does this team handle? (optional)" name="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} error={errors.description} maxLength={500} />
+      <fieldset className="space-y-3 rounded-lg border border-border p-3">
+        <legend className="px-1 text-sm font-medium text-ink">Calls and transfers</legend>
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" checked={accepts} onChange={(e) => setAccepts(e.target.checked)} /> This team accepts transferred calls
+        </label>
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" checked={alwaysOpen} onChange={(e) => setAlwaysOpen(e.target.checked)} /> Always open (no opening hours)
+        </label>
+        {!alwaysOpen ? <HoursEditor week={week} onChange={setWeek} /> : null}
+        {errors.hours ? <p role="alert" className="text-sm text-danger">{errors.hours}</p> : null}
+        <Input label="Time zone (optional)" name="timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)} error={errors.timezone} placeholder="Africa/Accra" hint="Leave empty to use the business time zone." />
+        <Select label="If this team is closed or nobody answers, try" name="fallback" value={fallbackId} onChange={(e) => setFallbackId(e.target.value)} error={errors.fallback_department_id}>
+          <option value="">No other team (offer a callback)</option>
+          {others.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </Select>
+      </fieldset>
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="secondary" onClick={onCancel} disabled={saving}>
           Cancel
@@ -131,6 +164,7 @@ export function DepartmentsView() {
               <TableHead>
                 <tr>
                   <TableHeader>Department</TableHeader>
+                  <TableHeader>Call routing</TableHeader>
                   <TableHeader>Employees</TableHeader>
                   <TableHeader>Open cases</TableHeader>
                   {canWrite ? <TableHeader>
@@ -144,6 +178,10 @@ export function DepartmentsView() {
                     <TableCell>
                       <p className="font-medium">{d.name}</p>
                       {d.description ? <p className="text-sm text-muted">{d.description}</p> : null}
+                    </TableCell>
+                    <TableCell>
+                      <p>{d.accepts_transfers ? summariseHours(d.hours) : "Not taking transfers"}</p>
+                      {d.fallback_department_id ? <p className="text-sm text-muted">Then {data.items.find((x) => x.id === d.fallback_department_id)?.name ?? "another team"}</p> : null}
                     </TableCell>
                     <TableCell>{d.employee_count ?? 0}</TableCell>
                     <TableCell>{d.open_cases ?? 0}</TableCell>
@@ -177,7 +215,7 @@ export function DepartmentsView() {
         </ResourceView>
       </Card>
 
-      <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Add department" : "Edit department"}>
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Add department" : "Edit department"} size="lg">
         {editing !== null ? (
           <DepartmentForm
             department={editing === "new" ? null : editing}
