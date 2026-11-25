@@ -97,13 +97,18 @@ async def provider_check(request: Request, p: Principal = Depends(require("voice
     return {"checked": True, "missing": [], "all_ok": all(r["ok"] for r in results.values()), "results": results}
 
 
-async def _business_context(db: AsyncSession, business_id: UUID, name: str) -> str:
-    """The minimum the assistant needs up front. Hours, policies and procedures come from the knowledge tool."""
-    depts = (await db.execute(select(Department.name).where(Department.business_id == business_id).order_by(Department.name))).scalars().all()
-    lines = [f"Business name: {name}."]
-    if depts:
-        lines.append("Departments: " + ", ".join(depts) + ".")
-    return "\n".join(lines)
+async def _business_context(db: AsyncSession, business_id: UUID, name: str, redact_contacts: bool = False) -> str:
+    """What the assistant is told about the business: the organisation profile and department hours, minimised (see business_context.py)."""
+    from app.api.v1.business_profile import _load, _view
+    from app.services.voice.business_context import build_business_context
+
+    business, profile = await _load(db, business_id)
+    depts = (await db.execute(select(Department).where(Department.business_id == business_id).order_by(Department.name))).scalars().all()
+    return build_business_context(
+        name=name, profile=_view(business, profile),
+        departments=[{"name": d.name, "hours": d.hours, "timezone": d.timezone} for d in depts],
+        redact_contacts=redact_contacts,
+    )
 
 
 async def _refuse(ws: WebSocket, code: str, close_code: int) -> None:
@@ -140,7 +145,7 @@ async def test_call(ws: WebSocket, agent_id: UUID | None = None):
             cfg = agent.config if isinstance(agent.config, dict) else {}
             voice_id = cfg.get("voice_id") or voice_id
         privacy = await load_privacy(db, business_id)
-        context = await _business_context(db, business_id, business_name)
+        context = await _business_context(db, business_id, business_name, bool(privacy.redact_contact_details) if privacy else False)
 
     await ws.accept()
     stack = app.state.voice_stack

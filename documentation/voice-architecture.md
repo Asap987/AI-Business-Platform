@@ -122,6 +122,10 @@ Run the tests: `cd backend && pip install -r requirements.txt && python -m pytes
 
 `TransferService` checks, in order: department exists in the same business, accepts transfers, is open (hours and time zone), has active and available staff with a number. Staff are tried by `routing_priority`; a fallback department is used if nobody can be reached (same business, never loops, at most 3 hops, 3 attempts in total). If nothing works the assistant offers a callback. Conversation context (`HandoverContext`) goes to the receiver as a briefing and onto the callback record, never into the audit trail. Only `MockTelephony` exists: results are labelled simulated and the assistant is told not to say the caller is connected. Not built: AI-to-AI hand-over between department assistants, a department switchboard model, any real provider adapter.
 
+## 6c. Business profile in the assistant's instructions (2026-11-25)
+
+`app/services/voice/business_context.py` builds the business information from the profile and department hours: name, industry, description, languages, hours, branches, policies, tone and greeting. Never included: staff names, extensions, customer or case data. Business contact details are left out when the business has contact masking on, and the whole text goes through the same redaction as caller speech (card numbers, passwords, optionally emails and phones) and is capped at 6000 characters. This text is sent to OpenAI on a live call, so it falls under the privacy gate: nothing is sent until the provider questions are answered and approved. Not yet verified live: how the model uses it.
+
 ## 7. Next phases
 
 Phases 5–9 are done (offline). Remaining: opt-in live provider tests (paid, with explicit approval); the real backend API and database; telephony adapter and call lifecycle; wiring model fallback; the Control Center provider-privacy screen; accuracy tests per language.

@@ -193,7 +193,7 @@ export function BusinessProfileView() {
   const resource = useApiResource<BusinessProfile>("/business/profile");
   return (
     <>
-      <PageHeader title="Business details" description="What your assistants and team should know about your organisation." />
+      <PageHeader title="Business details" description="What your assistants and team should know about your organisation. Assistants read this during calls, so write only what customers may be told. Never enter customer or staff personal details, passwords or payment information." />
       <ResourceView resource={resource} skeleton={<Skeleton className="h-64 w-full" />}>
         {(data) => <Form initial={data} canWrite={canWrite} />}
       </ResourceView>
