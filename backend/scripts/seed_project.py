@@ -94,7 +94,7 @@ TASKS = [
     ("routing.extensions", "routing", "Employee extensions and availability", "completed", "medium", 2, T, "tests/api/test_routing.py: extension passed to provider, unavailable staff skipped, API validation and isolation", "", ["routing.service"], None, ""),
     ("routing.fallback", "routing", "Routing priorities and fallback rules", "completed", "medium", 3, T, "tests/api/test_routing.py: priority order, same-business fallback, loop cut, shared attempt budget, mutation-checked", "", ["routing.hours"], None, ""),
     ("routing.callback", "routing", "Callback requests and human escalation records", "completed", "high", 3, T, "tests/api/test_routing.py: callbacks API isolation, permissions, status rules, audit without numbers; Chromium run 12 of 13 checks plus a re-check", "", ["routing.service"], None, "A callback is a request, not a booked time."),
-    ("routing.context", "routing", "Preserve conversation context across departments", "in_progress", "high", 3, None, "", "AI-to-AI agent handover is not built; context is carried to callbacks and returned for a receiving person", ["routing.service", "ai.manager"], None, ""),
+    ("routing.context", "routing", "Preserve conversation context across departments", "completed", "high", 3, T, "tests/api/test_handover.py and tests/voice/test_handover_manager.py: briefing carried to callbacks, people and department assistants; limits and business isolation mutation-checked", "", ["routing.service", "ai.manager"], None, "Tested with fakes only; how the live model behaves after a hand-over is unverified."),
     # ---- email
     ("email.service", "email", "Email service with Resend adapter, templates, invitations, reset, verification, notices (offline)", "completed", "high", 4, T, "tests/api/test_email.py and a Chromium run with a fake provider", "", [], None, "No email has been sent for real."),
     ("email.domain", "email", "Verify the sending domain in Resend and set the key", "awaiting_external", "high", 2, None, "", "Owner provides the domain and verifies DNS records", ["email.service"], "email_delivery", ""),
@@ -119,7 +119,7 @@ TASKS = [
     ("usage.telephony", "usage", "Telephony cost per call", "not_started", "medium", 2, None, "", "", ["tel.adapter"], None, ""),
     ("usage.billing", "usage", "Subscription plans and billing", "not_started", "medium", 5, None, "", "", ["usage.record"], None, ""),
     # ---- testing
-    ("test.backend", "testing", "Offline backend test suite (fakes, no paid calls)", "completed", "high", 3, T, "310 passed, 2 skipped on SQLite; 163 passed on PostgreSQL API suite (run 2026-11-25)", "", [], None, ""),
+    ("test.backend", "testing", "Offline backend test suite (fakes, no paid calls)", "completed", "high", 3, T, "318 passed, 2 skipped on SQLite; 167 passed on PostgreSQL API suite (run 2026-11-27)", "", [], None, ""),
     ("test.project-dashboard", "testing", "Project progress dashboard for platform administrators", "completed", "medium", 2, T, "tests/api/test_project_tracker.py (11 tests) and a Chromium run: 18 of 18 checks, including 404 for another business and no horizontal scroll at 390 px", "", [], None, ""),
     ("test.e2e", "testing", "Commit the browser end-to-end scripts to the repository", "not_started", "high", 3, None, "", "Scripts exist only in a scratch folder", [], None, ""),
     ("test.ci", "testing", "Continuous integration (tests, type check, lint, build on every push)", "not_started", "high", 3, None, "", "", [], "monitoring", ""),

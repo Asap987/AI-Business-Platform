@@ -150,6 +150,7 @@ class OpenAIReasoning(ReasoningEngine):
                 business_context=request.business_context,
                 language_name=language.name if language else request.language_code,
                 language_guidance=request.language_guidance,
+                department_focus=request.department_focus,
             ),
             "input": self.build_input(request),
             "stream": True,

@@ -39,6 +39,13 @@ class TransferArgs(BaseModel):
     context: HandoverContext | None = None  # what the caller already told you, so the next person does not ask again
 
 
+class HandoverArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    department: str = Field(min_length=2, max_length=100)
+    reason: str = Field(default="", max_length=300)
+    context: HandoverContext | None = None
+
+
 class CallbackArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     phone: str = Field(max_length=30)
@@ -58,6 +65,7 @@ _TOOLS = {
 }
 _ROUTING_TOOLS = {
     "transfer_to_department": (TransferArgs, "Connect the caller to a department's people. Only say they are connected if the result says the provider confirmed it. Pass what the caller already told you in context."),
+    "hand_over_to_department_assistant": (HandoverArgs, "Pass this same call to a department's assistant (no telephone, no person). Pass everything the caller already told you in context so they are not asked again."),
     "request_callback": (CallbackArgs, "Record a request for a person to phone the caller back, when nobody can take the call now. Needs the caller's phone number. It is a request, not a booked time."),
 }
 _REFUSED = ToolResult(ok=False, summary="That action is not available.")
@@ -73,6 +81,7 @@ class DatabaseBusinessGateway(BusinessToolGateway):
     def _tools(self) -> dict:
         tools = dict(_TOOLS)
         tools["request_callback"] = _ROUTING_TOOLS["request_callback"]
+        tools["hand_over_to_department_assistant"] = _ROUTING_TOOLS["hand_over_to_department_assistant"]
         if self._transfer is not None:
             tools["transfer_to_department"] = _ROUTING_TOOLS["transfer_to_department"]
         return tools
@@ -88,6 +97,8 @@ class DatabaseBusinessGateway(BusinessToolGateway):
             args = tools[tool_name][0].model_validate(arguments)
         except ValidationError:
             return ToolResult(ok=False, summary="The request details were incomplete or invalid. Nothing was done.")
+        if isinstance(args, HandoverArgs):
+            return await self._do_handover(business_id, args)
         if isinstance(args, TransferArgs):
             return await self._do_transfer(business_id, session_id, args)
         if isinstance(args, CallbackArgs):
@@ -158,6 +169,26 @@ class DatabaseBusinessGateway(BusinessToolGateway):
                Decision.ALL_ATTEMPTS_FAILED: "Nobody answered."}[decision.decision]
         return ToolResult(ok=False, data=data, summary=f"{why} Nothing was transferred. Offer to record a callback request with request_callback, "
                           "use what the caller already told you, and do not ask for it again.")
+
+    async def _do_handover(self, business_id: UUID, args: HandoverArgs) -> ToolResult:
+        async with self._factory() as db:
+            dept = (await db.execute(select(Department).where(
+                Department.business_id == business_id, func.lower(Department.name) == args.department.strip().lower()))).scalar_one_or_none()
+            if dept is None:
+                names = (await db.execute(select(Department.name).where(Department.business_id == business_id).order_by(Department.name))).scalars().all()
+                return ToolResult(ok=False, summary="That department does not exist. Nothing was changed. Available: " + (", ".join(names) or "none"))
+            name, description = dept.name, dept.description
+        lines = [f"You are now the {name} assistant for this business, taking over the same call from the general assistant."]
+        if description:
+            lines.append(f"About the {name} team: {description}")
+        if args.reason:
+            lines.append(f"Why the call was passed to you: {args.reason}")
+        if args.context is not None and args.context.briefing():
+            lines.append("Briefing (the caller must not be asked for this again):\n" + args.context.briefing())
+        return ToolResult(
+            ok=True, data={"department": name, "focus": "\n".join(lines)},
+            summary=f"The call is now with the {name} assistant. This is an assistant, not a person, so do not say a person was connected. "
+                    "Say in one short sentence who you are now, and carry on without repeating questions already answered.")
 
     async def _do_callback(self, business_id: UUID, session_id: UUID, args: CallbackArgs) -> ToolResult:
         customer_id = await self._resolve_customer(business_id, session_id)

@@ -37,6 +37,8 @@ class ReasoningRequest(BaseModel):
     language_guidance: str | None = None
     # Per-business override of contact-detail masking; None means use the platform setting.
     redact_contact_details: bool | None = None
+    # Set after a hand-over to a department assistant: who you are now and the briefing you were given.
+    department_focus: str | None = None
 
 
 class ReasoningUsage(BaseModel):

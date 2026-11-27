@@ -74,6 +74,10 @@ class VoiceSession(BaseModel):
     transcript: list[TranscriptTurn] = Field(default_factory=list)
     tool_history: list[ToolCallRecord] = Field(default_factory=list)
     escalation: EscalationStatus = Field(default_factory=EscalationStatus)
+    # Which department's assistant is speaking now (None = the general assistant) and what it was told on taking over.
+    active_department: str | None = None
+    department_focus: str | None = None
+    handovers: int = 0
     started_at: datetime = Field(default_factory=_now)
     last_activity_at: datetime = Field(default_factory=_now)
     ended_at: datetime | None = None

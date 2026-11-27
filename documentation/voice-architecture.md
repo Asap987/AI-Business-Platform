@@ -126,6 +126,10 @@ Run the tests: `cd backend && pip install -r requirements.txt && python -m pytes
 
 `app/services/voice/business_context.py` builds the business information from the profile and department hours: name, industry, description, languages, hours, branches, policies, tone and greeting. Never included: staff names, extensions, customer or case data. Business contact details are left out when the business has contact masking on, and the whole text goes through the same redaction as caller speech (card numbers, passwords, optionally emails and phones) and is capped at 6000 characters. This text is sent to OpenAI on a live call, so it falls under the privacy gate: nothing is sent until the provider questions are answered and approved. Not yet verified live: how the model uses it.
 
+## 6d. Hand-over between department assistants (2026-11-27)
+
+Tool `hand_over_to_department_assistant` (department, reason, context). The call stays open; the session records the active department and a briefing (department description, reason, `HandoverContext`), and every later model request includes it, so the new "assistant" does not repeat questions. This is not telephony: no person is involved, and the assistant is told never to say one was connected. Limits: department must belong to the same business (otherwise "does not exist"), at most 3 hand-overs per call. The briefing lives in the live session only; the audit log gets nothing. Still the same underlying model with a different focus; separate per-department agents with their own tools or voices are not built.
+
 ## 7. Next phases
 
 Phases 5–9 are done (offline). Remaining: opt-in live provider tests (paid, with explicit approval); the real backend API and database; telephony adapter and call lifecycle; wiring model fallback; the Control Center provider-privacy screen; accuracy tests per language.

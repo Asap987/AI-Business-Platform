@@ -45,6 +45,8 @@ logger = logging.getLogger(__name__)
 
 AudioSink = Callable[[SpeechChunk], Awaitable[None]]
 ESCALATION_TOOL = "escalate_to_human"
+HANDOVER_TOOL = "hand_over_to_department_assistant"
+MAX_HANDOVERS = 3
 HANDOVER_MESSAGE = "I'm sorry, I'm having trouble. Let me connect you to a team member who can help."
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 _MAX_CHUNK = 220
@@ -225,6 +227,7 @@ class ConversationManager:
                         history=session.transcript[:-1], user_text=text, tools=tools,
                         tool_exchanges=exchanges, language_guidance=guidance,
                         redact_contact_details=session.redact_contact_details,
+                        department_focus=session.department_focus,
                     )
                     pending = None
                     async for event in self._reasoning.respond_stream(request):
@@ -284,6 +287,8 @@ class ConversationManager:
     async def _run_tool(self, session: VoiceSession, call: ToolCallRequested, allowed: set[str]) -> ToolExchange:
         if call.tool_name not in allowed:
             result = ToolResult(ok=False, summary="That action is not available.")
+        elif call.tool_name == HANDOVER_TOOL and session.handovers >= MAX_HANDOVERS:
+            result = ToolResult(ok=False, summary="This call has already been passed between assistants too many times. Nothing was changed. Offer a person with escalate_to_human, or a callback.")
         else:
             try:
                 result = await self._gateway.execute(
@@ -298,6 +303,10 @@ class ConversationManager:
         )
         if call.tool_name == ESCALATION_TOOL and result.ok:
             self._mark_escalated(session, str(call.arguments.get("reason", "requested")))
+        if call.tool_name == HANDOVER_TOOL and result.ok:
+            session.active_department = str(result.data.get("department", ""))[:100] or None
+            session.department_focus = str(result.data.get("focus", ""))[:3000] or None
+            session.handovers += 1
         return ToolExchange(call_id=call.call_id, tool_name=call.tool_name, arguments=call.arguments, result=result)
 
     @staticmethod
