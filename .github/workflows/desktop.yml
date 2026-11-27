@@ -1,0 +1,48 @@
+# Builds the KASORA AI desktop installers (Windows and macOS). Manual only: nothing runs on push, nothing is published.
+# The installers are UNSIGNED. Windows will show "unknown publisher" and macOS Gatekeeper will block them until the owner
+# adds code-signing certificates (see documentation/desktop-app.md). No secrets are used by this workflow.
+name: Desktop installers
+on:
+  workflow_dispatch:
+    inputs:
+      app_url:
+        description: "Address of the deployed KASORA AI web app (must start with https://)"
+        required: true
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            script: dist:win
+          - os: macos-latest
+            script: dist:mac
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - name: Write the app address into the build
+        shell: bash
+        env:
+          APP_URL: ${{ inputs.app_url }}
+        run: node -e "const u=new URL(process.env.APP_URL); if(u.protocol!=='https:'||u.username||u.password){throw new Error('app_url must be a plain https address')} require('fs').writeFileSync('app-config.json', JSON.stringify({appUrl:u.origin}))"
+      - run: npm run ${{ matrix.script }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kasora-desktop-${{ matrix.os }}
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.dmg
+          if-no-files-found: error

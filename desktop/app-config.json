@@ -1,0 +1,4 @@
+{
+  "appUrl": "",
+  "note": "Set appUrl to your deployed KASORA AI address (https only) before building. Leave empty to require the KASORA_APP_URL environment variable."
+}
