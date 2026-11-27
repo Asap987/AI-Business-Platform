@@ -119,7 +119,7 @@ TASKS = [
     ("usage.telephony", "usage", "Telephony cost per call", "not_started", "medium", 2, None, "", "", ["tel.adapter"], None, ""),
     ("usage.billing", "usage", "Subscription plans and billing", "not_started", "medium", 5, None, "", "", ["usage.record"], None, ""),
     # ---- testing
-    ("test.backend", "testing", "Offline backend test suite (fakes, no paid calls)", "completed", "high", 3, T, "318 passed, 2 skipped on SQLite; 167 passed on PostgreSQL API suite (run 2026-11-27)", "", [], None, ""),
+    ("test.backend", "testing", "Offline backend test suite (fakes, no paid calls)", "completed", "high", 3, T, "323 passed, 2 skipped on SQLite; 172 passed on PostgreSQL API suite (run 2026-11-27)", "", [], None, ""),
     ("test.project-dashboard", "testing", "Project progress dashboard for platform administrators", "completed", "medium", 2, T, "tests/api/test_project_tracker.py (11 tests) and a Chromium run: 18 of 18 checks, including 404 for another business and no horizontal scroll at 390 px", "", [], None, ""),
     ("test.e2e", "testing", "Commit the browser end-to-end scripts to the repository", "not_started", "high", 3, None, "", "Scripts exist only in a scratch folder", [], None, ""),
     ("test.ci", "testing", "Continuous integration (tests, type check, lint, build on every push)", "not_started", "high", 3, None, "", "", [], "monitoring", ""),
