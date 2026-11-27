@@ -84,7 +84,7 @@ TASKS = [
     ("tel.compare", "telephony", "Provider comparison (Telnyx, Twilio, Africa's Talking) from public pages", "completed", "high", 2, D, "documentation/telephony-comparison.md with sources", "", [], None, ""),
     ("tel.confirmations", "telephony", "Written confirmations from the three providers", "awaiting_external", "high", 3, None, "", "Numbers, rates, streaming, SIP, transfers, concurrency, requirements not yet confirmed in writing", ["tel.compare"], None, ""),
     ("tel.select", "telephony", "Select the telephony provider", "awaiting_approval", "high", 2, None, "", "Owner approval needed; no spend before then", ["tel.confirmations"], None, ""),
-    ("tel.adapter", "telephony", "Real provider adapter (Telnyx first, Twilio backup)", "not_started", "high", 5, None, "", "", ["tel.interface", "tel.select"], "call_transfers", ""),
+    ("tel.adapter", "telephony", "Real provider adapter (Telnyx first, Twilio backup)", "in_progress", "high", 5, None, "", "Transfer leg written from Telnyx public docs and tested with fakes only (tests/api/test_telnyx.py); never run against a Telnyx account. Inbound call answering and call audio are not built.", ["tel.interface", "tel.select"], "call_transfers", "Off by default: needs TELEPHONY_PROVIDER, TELEPHONY_LIVE_APPROVED, TELNYX_API_KEY, TELNYX_PUBLIC_KEY."),
     ("tel.numbers", "telephony", "Obtain a Ghana number (account documents, purchase)", "awaiting_approval", "high", 2, None, "", "Needs approval and business registration documents", ["tel.select"], None, ""),
     ("tel.audio", "telephony", "Phone audio path: 8 kHz resampling, streaming to the call runner", "not_started", "high", 3, None, "", "", ["tel.adapter"], "voice_quality", ""),
     ("tel.real-transfer", "telephony", "Real call transfer to a person, confirmed by the provider", "not_started", "critical", 4, None, "", "", ["tel.adapter", "routing.service"], "call_transfers", ""),
@@ -119,7 +119,7 @@ TASKS = [
     ("usage.telephony", "usage", "Telephony cost per call", "not_started", "medium", 2, None, "", "", ["tel.adapter"], None, ""),
     ("usage.billing", "usage", "Subscription plans and billing", "not_started", "medium", 5, None, "", "", ["usage.record"], None, ""),
     # ---- testing
-    ("test.backend", "testing", "Offline backend test suite (fakes, no paid calls)", "completed", "high", 3, T, "323 passed, 2 skipped on SQLite; 172 passed on PostgreSQL API suite (run 2026-11-27)", "", [], None, ""),
+    ("test.backend", "testing", "Offline backend test suite (fakes, no paid calls)", "completed", "high", 3, T, "337 passed, 2 skipped on SQLite; 186 passed on PostgreSQL API suite (run 2026-11-27)", "", [], None, ""),
     ("test.project-dashboard", "testing", "Project progress dashboard for platform administrators", "completed", "medium", 2, T, "tests/api/test_project_tracker.py (11 tests) and a Chromium run: 18 of 18 checks, including 404 for another business and no horizontal scroll at 390 px", "", [], None, ""),
     ("test.e2e", "testing", "Commit the browser end-to-end scripts to the repository", "not_started", "high", 3, None, "", "Scripts exist only in a scratch folder", [], None, ""),
     ("test.ci", "testing", "Continuous integration (tests, type check, lint, build on every push)", "not_started", "high", 3, None, "", "", [], "monitoring", ""),

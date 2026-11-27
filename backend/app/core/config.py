@@ -111,6 +111,15 @@ class Settings(BaseSettings):
     elevenlabs_stt_final_merge_wait_seconds: float = Field(default=0.3, ge=0.0)
 
     # ---- Voice sessions ---------------------------------------------------
+    # ---- Telephony (OFF by default; transfers are simulated until every item below is set) ----
+    # "telnyx" is used only when TELEPHONY_LIVE_APPROVED is also true: a deliberate second switch so a stray key can never start real calls.
+    telephony_provider: Literal["mock", "telnyx"] = "mock"
+    telephony_live_approved: bool = False
+    telnyx_api_key: SecretStr | None = None
+    telnyx_public_key: str | None = None  # base64 Ed25519 key from the Telnyx portal; verifies webhook signatures (not secret)
+    telnyx_from_number: str | None = None  # caller ID on the transfer leg; must be a number the account owns. Empty = Telnyx default
+    telnyx_transfer_timeout_seconds: int = Field(default=25, ge=5, le=60)
+
     # Live voice is OFF until an administrator opts in: it calls paid providers.
     voice_live_enabled: bool = False
     voice_disabled_providers: list[str] = Field(default_factory=list)  # e.g. ["openai"] switches a provider off at startup
